@@ -359,7 +359,7 @@ function startTracking(){
    if(last){
     const step=distanceBetween(last,point);
 
-    if(step<3){
+    if(step < Math.max(3, (accuracy + last.accuracy) / 2)){
      say("GPS accuracy: "+Math.round(accuracy)+
          " m. Location stable; waiting for movement.");
      return;
