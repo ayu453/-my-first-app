@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,15 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1018">
 <title>Project Atlas</title>
-
-<link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Widgets/widgets.css">
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Cesium.js"></script>
-
+<link href="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0b1018;--panel:#131c29;--border:#263448;--green:#54f5a5;--muted:#aab8c9}
-body{font-family:Arial,sans-serif;background:var(--bg);color:#f4f7fb;width:100%;max-width:none;margin:0;padding:clamp(12px,2.5vw,30px)}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:12px}
+body{font-family:Arial,sans-serif;background:var(--bg);color:#f4f7fb;width:100%;margin:0;padding:clamp(12px,2.5vw,30px)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:12px;flex-wrap:wrap}
 .logo{font-size:clamp(18px,3vw,25px);font-weight:900;letter-spacing:1px}
 .green{color:var(--green)}
 .pill{border:1px solid #344154;border-radius:20px;padding:8px 12px;font-size:11px;color:var(--muted)}
@@ -34,7 +33,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .secondary{background:#202c3b;color:white;border:1px solid #344154}
 .danger{background:#49252d;color:#ffd5dc;border:1px solid #70404a}
 .note{font-size:11px;margin-top:12px}
-.map-shell{width:100%;height:clamp(430px,68vh,850px);min-height:430px;position:relative;overflow:hidden;border:1px solid #30464a;border-radius:16px;background:#101923}
+.map-shell{width:100%;height:clamp(430px,68vh,850px);min-height:430px;position:relative;overflow:hidden;border:1px solid #30464a;border-radius:16px;background:#d9e6d1}
 #atlasMap{width:100%;height:100%;min-height:430px}
 .map-top{position:absolute;z-index:5;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
 .map-chip{background:#0b1018e8;border:1px solid #344154;border-radius:9px;padding:10px 12px;font-size:11px;color:#eaf3fc;max-width:75%;line-height:1.5}
@@ -51,7 +50,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .history-actions button{width:100%}
 .empty{font-size:13px;color:var(--muted);padding:14px 0}
 footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-height:1.7}
-.cesium-viewer-bottom{font-size:10px}
+.maplibregl-ctrl-group{border-radius:9px!important;overflow:hidden}
 @media(max-width:700px){
  body{padding:12px}
  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
@@ -59,16 +58,15 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
  .map-shell,#atlasMap{min-height:430px}
  .map-shell{height:62vh}
  .map-buttons{bottom:36px}
+ .map-top{flex-wrap:wrap}
 }
 </style>
 </head>
-
 <body>
 <header>
   <div class="logo">PROJECT <span class="green">ATLAS</span></div>
-  <div class="pill">3D MAP PROTOTYPE</div>
+  <div class="pill">3D CITY MAP PROTOTYPE</div>
 </header>
-
 <div class="eyebrow">MOVE IN THE REAL WORLD</div>
 <h1>Your world.<br>Your <span class="green">territory.</span></h1>
 <p>Move, record your route, and explore the future of territory capture.</p>
@@ -85,58 +83,47 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <div class="eyebrow">YOUR OBJECTIVE</div>
   <h2 style="margin-top:10px">Explore. Move. Map.</h2>
   <p>Record a route in a safe, permitted area. Atlas displays your GPS route on the map and estimates the area enclosed by it.</p>
-  <div class="status">
-    <strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>
-    This prototype does not capture or assign real territory.
-  </div>
+  <div class="status"><strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>This prototype does not capture or assign real territory.</div>
 </div>
 
 <h3>📍 Movement session</h3>
 <div class="panel">
   <div class="eyebrow">GPS ROUTE RECORDING</div>
   <p>Tap START MISSION to request location permission. Tap again to stop recording.</p>
-  <div class="controls">
-    <button id="toggleBtn" onclick="toggleTracking()">START MISSION</button>
-  </div>
+  <div class="controls"><button id="toggleBtn" onclick="toggleTracking()">START MISSION</button></div>
   <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
   <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings. You do not need to travel anywhere just to test the map.</p>
 </div>
 
-<h3>🌍 Interactive 3D world map</h3>
+<h3>🌍 Interactive 3D city map</h3>
 <div class="map-shell">
-  <div id="atlasMap" aria-label="Interactive 3D world map"></div>
+  <div id="atlasMap" aria-label="Interactive 3D city map"></div>
   <div class="map-top">
-    <div class="map-chip">
-      <strong>ATLAS WORLD</strong><br>
-      Rotate · Zoom · Explore
-    </div>
-    <div class="map-chip" id="mapStatus">Loading real-world map…</div>
+    <div class="map-chip"><strong>ATLAS CITY MAP</strong><br>Pinch to zoom · Drag to move · Two fingers to tilt</div>
+    <div class="map-chip" id="mapStatus">Loading map…</div>
   </div>
   <div class="map-buttons">
     <button onclick="goToIndia()">VIEW INDIA</button>
     <button class="secondary" onclick="goToMyLocation()">MY GPS</button>
     <button class="secondary" onclick="resetMapView()">RESET VIEW</button>
+    <button class="secondary" onclick="toggle3D()">3D / FLAT</button>
   </div>
-  <div class="map-credit">Map imagery © OpenStreetMap contributors · CesiumJS</div>
+  <div class="map-credit">© OpenStreetMap contributors · OpenFreeMap · MapLibre</div>
 </div>
 
 <div class="details" aria-live="polite">
   <div class="eyebrow">LIVE MAP STATUS</div>
-  <h2 id="zoneName">Explore the Earth</h2>
-  <p id="zoneOwner">The globe can be rotated and zoomed with touch or mouse controls.</p>
-  <p id="zoneInfo">Your route will appear here when reliable GPS points are received. Detailed 3D buildings and terrain may require a Cesium ion token.</p>
+  <h2 id="zoneName">Explore the city</h2>
+  <p id="zoneOwner">Colourful street map with tilt, rotation and available 3D buildings.</p>
+  <p id="zoneInfo">Building and road detail depends on the map data available for each area. GPS route points are shown only during a session.</p>
 </div>
 
 <h3>📚 Mission history</h3>
 <div class="panel">
   <div class="eyebrow">YOUR COMPLETED SESSIONS</div>
   <p>Completed sessions are saved in this browser. Only date, distance, duration and estimated area are stored—not GPS coordinates.</p>
-  <div id="historyList" aria-live="polite">
-    <div class="empty">Loading mission history…</div>
-  </div>
-  <div class="history-actions">
-    <button class="danger" onclick="clearHistory()">CLEAR HISTORY</button>
-  </div>
+  <div id="historyList" aria-live="polite"><div class="empty">Loading mission history…</div></div>
+  <div class="history-actions"><button class="danger" onclick="clearHistory()">CLEAR HISTORY</button></div>
   <p class="note">History is stored on this device and is not shared with other players. Clearing browser data may remove it.</p>
 </div>
 
@@ -148,213 +135,154 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <div id="challengeInfo" class="status" style="display:none" aria-live="polite"></div>
 </div>
 
-<footer>
-PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>
-GPS recording requires permission and a secure HTTPS website.<br>
-No live multiplayer, server validation, or official territory capture yet.
-</footer>
+<footer>PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>GPS recording requires permission and a secure HTTPS website.<br>No live multiplayer, server validation, or official territory capture yet.</footer>
 
 <script>
-/*
- OPTIONAL:
- To enable Cesium ion terrain and 3D buildings later, put your own
- Cesium ion access token between the quotation marks below.
- Leave it empty for the basic 3D globe and OpenStreetMap imagery.
- Do not publish a private/restricted token in a public repository.
-*/
-const CESIUM_ION_TOKEN = "";
-
-let viewer = null;
+let map = null;
 let watchId = null;
 let recording = false;
 let route = [];
 let totalDistance = 0;
 let startedAt = 0;
 let timerId = null;
-let routeLine = null;
-let routePolygon = null;
-let currentMarker = null;
-let startMarker = null;
 let storageAvailable = true;
-
+let is3D = true;
 const HISTORY_KEY = "projectAtlasMissionHistoryV1";
-const routeEntityIds = [];
+const routeSourceId = "atlas-route";
+const routeLayerId = "atlas-route-line";
+const routePointSourceId = "atlas-route-points";
 
 function setMapStatus(message){
  const el=document.getElementById("mapStatus");
  if(el)el.textContent=message;
 }
-
 function initMap(){
- if(!window.Cesium){
-  setMapStatus("Map library did not load. Check your internet connection and reload.");
+ if(!window.maplibregl){
+  setMapStatus("Map library did not load. Check internet and reload.");
   document.getElementById("zoneName").textContent="Map unavailable";
-  document.getElementById("zoneOwner").textContent="The map library could not be loaded.";
   return;
  }
-
  try{
-  if(CESIUM_ION_TOKEN.trim()){
-   Cesium.Ion.defaultAccessToken=CESIUM_ION_TOKEN.trim();
-  }
-
-  viewer=new Cesium.Viewer("atlasMap",{
-   baseLayer: new Cesium.ImageryLayer(
- new Cesium.OpenStreetMapImageryProvider({
-  url: "https://tile.openstreetmap.org/"
- })
-),
-terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-   animation:false,
-   timeline:false,
-   baseLayerPicker:false,
-   geocoder:false,
-   homeButton:false,
-   sceneModePicker:false,
-   navigationHelpButton:false,
-   fullscreenButton:false,
-   infoBox:false,
-   selectionIndicator:false,
-   requestRenderMode:false,
-   scene3DOnly:true
+  map = new maplibregl.Map({
+   container:"atlasMap",
+   style:"https://tiles.openfreemap.org/styles/bright",
+   center:[84.8,23.7],
+   zoom:5.2,
+   pitch:52,
+   bearing:-12,
+   maxPitch:75,
+   antialias:true,
+   attributionControl:true,
+   touchZoomRotate:true,
+   dragRotate:true,
+   pitchWithRotate:true
   });
-
-  viewer.scene.globe.enableLighting=true;
-  viewer.scene.globe.depthTestAgainstTerrain=false;
-  viewer.scene.screenSpaceCameraController.enableCollisionDetection=true;
-
-  goToIndia();
-  setMapStatus("3D globe ready · OpenStreetMap");
-
-  if(CESIUM_ION_TOKEN.trim()){
-   enablePremium3D();
-  }
+  map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true,visualizePitch:true}),"top-right");
+  map.addControl(new maplibregl.ScaleControl({maxWidth:100,unit:"metric"}),"bottom-right");
+  map.on("load",()=>{
+   try{
+    map.addSource("openfreemap-buildings",{type:"vector",url:"https://tiles.openfreemap.org/planet"});
+    const layers=map.getStyle().layers||[];
+    let labelLayerId;
+    for(const layer of layers){
+     if(layer.type==="symbol" && layer.layout && layer.layout["text-field"]){labelLayerId=layer.id;break;}
+    }
+    map.addLayer({
+     id:"atlas-3d-buildings",
+     source:"openfreemap-buildings",
+     "source-layer":"building",
+     type:"fill-extrusion",
+     minzoom:14,
+     filter:["!=",["get","hide_3d"],true],
+     paint:{
+      "fill-extrusion-color":[
+       "interpolate",["linear"],["coalesce",["get","render_height"],["get","height"],10],
+       0,"#d8e1e8",30,"#b8cbd5",100,"#9eb7c6"
+      ],
+      "fill-extrusion-height":["interpolate",["linear"],["zoom"],14,0,15,["coalesce",["get","render_height"],["get","height"],8]],
+      "fill-extrusion-base":["coalesce",["get","render_min_height"],["get","min_height"],0],
+      "fill-extrusion-opacity":0.92
+     }
+    },labelLayerId);
+    setMapStatus("Colourful map ready · 3D buildings appear when data is available");
+   }catch(e){
+    console.warn("3D building layer could not be added",e);
+    setMapStatus("Map ready · 3D building data unavailable here");
+   }
+   addRouteLayers();
+  });
+  map.on("error",e=>{console.warn("Map error",e.error||e);});
  }catch(error){
   console.error(error);
-  setMapStatus("Map could not start. Check your connection and reload.");
+  setMapStatus("Map could not start. Reload and check connection.");
  }
 }
-
-async function enablePremium3D(){
- try{
-  setMapStatus("Loading 3D terrain…");
-  viewer.terrainProvider=await Cesium.createWorldTerrainAsync();
-  try{
-   const buildings=await Cesium.createOsmBuildingsAsync();
-   viewer.scene.primitives.add(buildings);
-   setMapStatus("3D terrain and available buildings enabled");
-  }catch(buildingError){
-   console.warn("3D buildings could not load:",buildingError);
-   setMapStatus("3D terrain enabled · Buildings unavailable");
-  }
- }catch(error){
-  console.warn("Premium terrain could not load:",error);
-  setMapStatus("Basic 3D globe ready · Terrain unavailable");
- }
-}
-
 function goToIndia(){
- if(!viewer)return;
- viewer.camera.flyTo({
-  destination:Cesium.Cartesian3.fromDegrees(80.0,22.0,6500000),
-  orientation:{
-   heading:0,
-   pitch:Cesium.Math.toRadians(-45),
-   roll:0
-  },
-  duration:1.5
- });
- document.getElementById("zoneName").textContent="Explore the Earth";
+ if(!map)return;
+ map.flyTo({center:[80.0,22.0],zoom:5.1,pitch:is3D?48:0,bearing:is3D?-10:0,duration:1400});
+ document.getElementById("zoneName").textContent="Explore India";
  document.getElementById("zoneOwner").textContent="Showing a broad view of India.";
- document.getElementById("zoneInfo").textContent="Zoom in to explore map imagery. This is not a territory ownership map.";
+ document.getElementById("zoneInfo").textContent="Zoom into a town or city to see more street detail. 3D buildings appear at closer zoom levels where building data exists.";
 }
-
 function goToMyLocation(){
- if(!viewer)return;
+ if(!map)return;
  const last=route[route.length-1];
- if(!last){
-  say("Start a mission first to show a GPS position. Location is not requested by this map button alone.");
-  return;
- }
- viewer.camera.flyTo({
-  destination:Cesium.Cartesian3.fromDegrees(last.lon,last.lat,2500),
-  orientation:{
-   heading:0,
-   pitch:Cesium.Math.toRadians(-55),
-   roll:0
-  },
-  duration:1.2
- });
+ if(!last){say("Start a mission first to record a GPS position. This button does not request location by itself.");return;}
+ map.flyTo({center:[last.lon,last.lat],zoom:17,pitch:is3D?60:0,bearing:map.getBearing(),duration:1200});
 }
-
 function resetMapView(){
- if(!viewer)return;
- viewer.camera.flyTo({
-  destination:Cesium.Cartesian3.fromDegrees(0,10,18000000),
-  orientation:{
-   heading:0,
-   pitch:Cesium.Math.toRadians(-35),
-   roll:0
-  },
-  duration:1.5
- });
+ if(!map)return;
+ map.flyTo({center:[84.8,23.7],zoom:5.2,pitch:is3D?52:0,bearing:is3D?-12:0,duration:1400});
 }
-
-function say(message){
- document.getElementById("status").textContent=message;
+function toggle3D(){
+ if(!map)return;
+ is3D=!is3D;
+ map.easeTo({pitch:is3D?55:0,bearing:is3D?-12:0,duration:800});
+ setMapStatus(is3D?"3D camera enabled · tilt with two fingers":"Flat view enabled");
 }
-
+function say(message){document.getElementById("status").textContent=message;}
 function setButton(active){
  const btn=document.getElementById("toggleBtn");
  btn.textContent=active?"STOP MISSION":"START MISSION";
  btn.classList.toggle("secondary",active);
 }
-
-function toggleTracking(){
- if(recording)stopTracking();
- else startTracking();
-}
-
+function toggleTracking(){if(recording)stopTracking();else startTracking();}
 function distanceBetween(a,b){
- const R=6371000;
- const rad=x=>x*Math.PI/180;
- const dLat=rad(b.lat-a.lat);
- const dLon=rad(b.lon-a.lon);
- const x=Math.sin(dLat/2)**2+
- Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+ const R=6371000,rad=x=>x*Math.PI/180;
+ const dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon);
+ const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-
+function formatDistance(d){return d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";}
+function formatArea(a){if(a===null||!Number.isFinite(a))return "Unavailable";return a>=10000?(a/10000).toFixed(2)+" ha":Math.round(a)+" m²";}
 function updateDistance(){
  document.getElementById("distance").textContent=formatDistance(totalDistance);
  document.getElementById("points").textContent=route.length;
 }
-
 function updateTimer(){
  if(!startedAt)return;
  const seconds=Math.floor((Date.now()-startedAt)/1000);
- document.getElementById("duration").textContent=
-  String(Math.floor(seconds/60)).padStart(2,"0")+":"+
-  String(seconds%60).padStart(2,"0");
+ document.getElementById("duration").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
 }
-
+function addRouteLayers(){
+ if(!map||map.getSource(routeSourceId))return;
+ map.addSource(routeSourceId,{type:"geojson",data:{type:"Feature",geometry:{type:"LineString",coordinates:[]},properties:{}}});
+ map.addLayer({id:routeLayerId,type:"line",source:routeSourceId,layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#00b879","line-width":5,"line-opacity":0.95}});
+ map.addSource(routePointSourceId,{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+ map.addLayer({id:"atlas-route-points-layer",type:"circle",source:routePointSourceId,paint:{"circle-radius":7,"circle-color":"#178cff","circle-stroke-color":"#ffffff","circle-stroke-width":2}});
+ updateRouteOnMap();
+}
+function updateRouteOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource(routeSourceId)||!map.getSource(routePointSourceId))return;
+ const coords=route.map(p=>[p.lon,p.lat]);
+ map.getSource(routeSourceId).setData({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:coords.length?coords:[[0,0]]}});
+ map.getSource(routePointSourceId).setData({type:"FeatureCollection",features:route.map((p,i)=>({type:"Feature",properties:{index:i},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))});
+}
 function startTracking(){
  if(recording)return;
-
- if(!navigator.geolocation){
-  say("GPS is not available in this browser.");
-  return;
- }
-
- if(!window.isSecureContext){
-  say("GPS requires HTTPS. Open your published GitHub Pages website.");
-  return;
- }
-
- route=[];
- totalDistance=0;
- startedAt=Date.now();
-
+ if(!navigator.geolocation){say("GPS is not available in this browser.");return;}
+ if(!window.isSecureContext){say("GPS requires HTTPS. Open your published GitHub Pages website.");return;}
+ route=[];totalDistance=0;startedAt=Date.now();
  document.getElementById("distance").textContent="0 m";
  document.getElementById("duration").textContent="00:00";
  document.getElementById("area").textContent="Recording…";
@@ -362,383 +290,99 @@ function startTracking(){
  document.getElementById("missionStatus").textContent="IN PROGRESS";
  document.getElementById("zoneName").textContent="Recording your route";
  document.getElementById("zoneOwner").textContent="Waiting for reliable GPS points…";
- document.getElementById("zoneInfo").textContent="The route will be drawn on the map. GPS points are not saved to mission history.";
-
- clearRouteEntities();
-
- recording=true;
- setButton(true);
- updateTimer();
- timerId=setInterval(updateTimer,1000);
- say("Requesting GPS permission…");
-
+ document.getElementById("zoneInfo").textContent="GPS route is an estimate, not an official territory claim.";
+ recording=true;setButton(true);updateTimer();timerId=setInterval(updateTimer,1000);say("Requesting GPS permission…");
+ updateRouteOnMap();
  try{
   watchId=navigator.geolocation.watchPosition(position=>{
    if(!recording)return;
-
    const c=position.coords;
-
-   if(c.accuracy>100){
-    say("GPS accuracy is weak ("+Math.round(c.accuracy)+" m). Waiting for a better reading.");
-    return;
-   }
-
-   const point={
-    lat:c.latitude,
-    lon:c.longitude,
-    accuracy:c.accuracy,
-    time:position.timestamp
-   };
-
+   if(c.accuracy>100){say("GPS accuracy is weak ("+Math.round(c.accuracy)+" m). Waiting for a better reading.");return;}
+   const point={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,time:position.timestamp};
    const last=route[route.length-1];
-
    if(last){
     const step=distanceBetween(last,point);
     if(step<3)return;
-    if(step>500){
-     say("Large GPS jump ignored. Waiting for the next reliable point.");
-     return;
-    }
+    if(step>500){say("Large GPS jump ignored. Waiting for the next reliable point.");return;}
     totalDistance+=step;
    }
-
-   route.push(point);
-   updateDistance();
-   drawRoute();
+   route.push(point);updateDistance();updateRouteOnMap();
    setMapStatus("GPS route recording · "+route.length+" points");
    say("Recording route… "+route.length+" reliable GPS points collected.");
    document.getElementById("zoneOwner").textContent="GPS points recorded: "+route.length;
-   document.getElementById("zoneInfo").textContent="Displayed route is a GPS estimate, not an official territory claim.";
-
-   if(route.length===1){
-    viewer.camera.flyTo({
-     destination:Cesium.Cartesian3.fromDegrees(point.lon,point.lat,3500),
-     orientation:{
-      heading:0,
-      pitch:Cesium.Math.toRadians(-50),
-      roll:0
-     },
-     duration:1
-    });
-   }
+   if(route.length===1)map.flyTo({center:[point.lon,point.lat],zoom:17,pitch:is3D?58:0,duration:1000});
   },error=>{
    let message="GPS error.";
    if(error.code===1)message="Location permission was denied. Check browser location settings.";
    if(error.code===2)message="Your location could not be determined. Try again later.";
    if(error.code===3)message="GPS request timed out. You can try START MISSION again.";
    stopTracking(true,message);
-  },{
-   enableHighAccuracy:true,
-   maximumAge:2000,
-   timeout:20000
-  });
- }catch(error){
-  stopTracking(true,"Could not start GPS. Please try again.");
- }
+  },{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+ }catch(error){stopTracking(true,"Could not start GPS. Please try again.");}
 }
-
-function clearRouteEntities(){
- if(!viewer)return;
- for(const id of routeEntityIds){
-  viewer.entities.removeById(id);
- }
- routeEntityIds.length=0;
- routeLine=null;
- routePolygon=null;
- currentMarker=null;
- startMarker=null;
-}
-
-function drawRoute(){
- if(!viewer||route.length===0)return;
-
- clearRouteEntities();
-
- const positions=route.map(p=>Cesium.Cartesian3.fromDegrees(p.lon,p.lat,8));
-
- if(positions.length>=2){
-  const line=viewer.entities.add({
-   name:"Project Atlas GPS route",
-   polyline:{
-    positions:positions,
-    width:5,
-    material:Cesium.Color.fromCssColorString("#54f5a5"),
-    clampToGround:false
-   }
-  });
-  routeEntityIds.push(line.id);
-  routeLine=line;
- }
-
- const first=route[0];
- const last=route[route.length-1];
-
- const start=viewer.entities.add({
-  name:"Mission start",
-  position:Cesium.Cartesian3.fromDegrees(first.lon,first.lat,12),
-  point:{
-   pixelSize:12,
-   color:Cesium.Color.fromCssColorString("#54f5a5"),
-   outlineColor:Cesium.Color.WHITE,
-   outlineWidth:2,
-   disableDepthTestDistance:Number.POSITIVE_INFINITY
-  },
-  label:{
-   text:"START",
-   font:"12px Arial",
-   fillColor:Cesium.Color.WHITE,
-   outlineColor:Cesium.Color.BLACK,
-   outlineWidth:3,
-   style:Cesium.LabelStyle.FILL_AND_OUTLINE,
-   pixelOffset:new Cesium.Cartesian2(0,-22),
-   disableDepthTestDistance:Number.POSITIVE_INFINITY
-  }
-  });
- routeEntityIds.push(start.id);
- startMarker=start;
-
- const current=viewer.entities.add({
-  name:"Current GPS position",
-  position:Cesium.Cartesian3.fromDegrees(last.lon,last.lat,12),
-  point:{
-   pixelSize:14,
-   color:Cesium.Color.fromCssColorString("#70b7ff"),
-   outlineColor:Cesium.Color.WHITE,
-   outlineWidth:2,
-   disableDepthTestDistance:Number.POSITIVE_INFINITY
-  },
-  label:{
-   text:"YOU",
-   font:"12px Arial",
-   fillColor:Cesium.Color.WHITE,
-   outlineColor:Cesium.Color.BLACK,
-   outlineWidth:3,
-   style:Cesium.LabelStyle.FILL_AND_OUTLINE,
-   pixelOffset:new Cesium.Cartesian2(0,-23),
-   disableDepthTestDistance:Number.POSITIVE_INFINITY
-  }
- });
- routeEntityIds.push(current.id);
- currentMarker=current;
-}
-
 function estimateArea(points){
  if(points.length<4)return null;
-
  const lat0=points.reduce((s,p)=>s+p.lat,0)/points.length;
  const lon0=points.reduce((s,p)=>s+p.lon,0)/points.length;
- const R=6371000;
- const rad=Math.PI/180;
-
- const xy=points.map(p=>({
-  x:(p.lon-lon0)*rad*R*Math.cos(lat0*rad),
-  y:(p.lat-lat0)*rad*R
- }));
-
+ const R=6371000,rad=Math.PI/180;
+ const xy=points.map(p=>({x:(p.lon-lon0)*rad*R*Math.cos(lat0*rad),y:(p.lat-lat0)*rad*R}));
  let sum=0;
- for(let i=0;i<xy.length;i++){
-  const j=(i+1)%xy.length;
-  sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;
- }
+ for(let i=0;i<xy.length;i++){const j=(i+1)%xy.length;sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;}
  return Math.abs(sum)/2;
 }
-
-function drawAreaPolygon(){
- if(!viewer||route.length<4)return;
-
- const coordinates=[];
- for(const p of route){
-  coordinates.push(p.lon,p.lat,5);
- }
- const first=route[0];
- coordinates.push(first.lon,first.lat,5);
-
- const polygon=viewer.entities.add({
-  name:"Estimated mission area (not claimed)",
-  polygon:{
-   hierarchy:Cesium.Cartesian3.fromDegreesArrayHeights(coordinates),
-   material:Cesium.Color.fromCssColorString("#54f5a5").withAlpha(0.22),
-   outline:true,
-   outlineColor:Cesium.Color.fromCssColorString("#54f5a5"),
-   perPositionHeight:false
-  }
- });
- routeEntityIds.push(polygon.id);
- routePolygon=polygon;
-}
-
-function formatDistance(d){
- return d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";
-}
-
-function formatArea(a){
- if(a===null||!Number.isFinite(a))return "Unavailable";
- return a>=10000?(a/10000).toFixed(2)+" ha":Math.round(a)+" m²";
-}
-
 function getHistory(){
- try{
-  const raw=localStorage.getItem(HISTORY_KEY);
-  if(!raw)return [];
-  const data=JSON.parse(raw);
-  return Array.isArray(data)?data:[];
- }catch(error){
-  storageAvailable=false;
-  return [];
- }
+ try{const raw=localStorage.getItem(HISTORY_KEY);if(!raw)return [];const data=JSON.parse(raw);return Array.isArray(data)?data:[];}
+ catch(error){storageAvailable=false;return [];}
 }
-
 function saveHistory(history){
- try{
-  localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
-  storageAvailable=true;
-  return true;
- }catch(error){
-  storageAvailable=false;
-  return false;
- }
+ try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));storageAvailable=true;return true;}
+ catch(error){storageAvailable=false;return false;}
 }
-
 function renderHistory(){
- const container=document.getElementById("historyList");
- const history=getHistory();
-
- if(!history.length){
-  container.innerHTML='<div class="empty">No completed missions yet. Finish a session with enough GPS points to save it here.</div>';
-  return;
- }
-
+ const container=document.getElementById("historyList"),history=getHistory();
+ if(!history.length){container.innerHTML='<div class="empty">No completed missions yet. Finish a session with enough GPS points to save it here.</div>';return;}
  container.replaceChildren();
-
  history.forEach((item,index)=>{
-  const card=document.createElement("div");
-  card.className="history-item";
-
-  const title=document.createElement("h4");
-  title.textContent="MISSION "+(history.length-index);
-  card.appendChild(title);
-
-  const date=document.createElement("p");
-  date.textContent="Date: "+item.date;
-  card.appendChild(date);
-
-  const distance=document.createElement("p");
-  distance.textContent="Distance: "+formatDistance(item.distance);
-  card.appendChild(distance);
-
-  const duration=document.createElement("p");
-  duration.textContent="Duration: "+item.duration;
-  card.appendChild(duration);
-
-  const area=document.createElement("p");
-  area.textContent="Estimated area: "+formatArea(item.area);
-  card.appendChild(area);
-
+  const card=document.createElement("div");card.className="history-item";
+  const title=document.createElement("h4");title.textContent="MISSION "+(history.length-index);card.appendChild(title);
+  for(const [label,value] of [["Date",item.date],["Distance",formatDistance(item.distance)],["Duration",item.duration],["Estimated area",formatArea(item.area)]]){
+   const p=document.createElement("p");p.textContent=label+": "+value;card.appendChild(p);
+  }
   container.appendChild(card);
  });
 }
-
 function clearHistory(){
  const history=getHistory();
-
- if(!history.length){
-  say("There is no mission history to clear.");
-  return;
- }
-
- if(!confirm("Clear all saved mission history from this browser? This cannot be undone.")){
-  return;
- }
-
- if(!saveHistory([])){
-  say("History could not be cleared. Browser storage may be unavailable.");
-  return;
- }
-
- renderHistory();
- say("Mission history cleared from this browser.");
+ if(!history.length){say("There is no mission history to clear.");return;}
+ if(!confirm("Clear all saved mission history from this browser? This cannot be undone."))return;
+ if(!saveHistory([])){say("History could not be cleared. Browser storage may be unavailable.");return;}
+ renderHistory();say("Mission history cleared from this browser.");
 }
-
 function stopTracking(fromError=false,errorMessage=""){
  if(!recording)return;
-
  recording=false;
-
- if(watchId!==null){
-  navigator.geolocation.clearWatch(watchId);
-  watchId=null;
- }
-
- if(timerId!==null){
-  clearInterval(timerId);
-  timerId=null;
- }
-
- setButton(false);
- updateTimer();
-
- if(fromError){
-  document.getElementById("missionStatus").textContent="INTERRUPTED";
-  document.getElementById("area").textContent="Unavailable";
-  say(errorMessage+" This session was not saved to history.");
-  return;
- }
-
+ if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+ if(timerId!==null){clearInterval(timerId);timerId=null;}
+ setButton(false);updateTimer();
+ if(fromError){document.getElementById("missionStatus").textContent="INTERRUPTED";document.getElementById("area").textContent="Unavailable";say(errorMessage+" This session was not saved to history.");return;}
  document.getElementById("missionStatus").textContent="FINISHED";
-
- if(route.length<4){
-  document.getElementById("area").textContent="Unavailable";
-  say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");
-  return;
- }
-
+ if(route.length<4){document.getElementById("area").textContent="Unavailable";say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");return;}
  const estimated=estimateArea(route);
-
- if(estimated===null||!Number.isFinite(estimated)){
-  document.getElementById("area").textContent="Unavailable";
-  say("Session stopped, but the area could not be estimated. This session was not saved.");
-  return;
- }
-
+ if(estimated===null||!Number.isFinite(estimated)){document.getElementById("area").textContent="Unavailable";say("Session stopped, but the area could not be estimated. This session was not saved.");return;}
  document.getElementById("area").textContent=formatArea(estimated);
-
  const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
- const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+
-  String(elapsedSeconds%60).padStart(2,"0");
-
- const record={
-  date:new Date().toLocaleString(),
-  distance:Math.round(totalDistance*100)/100,
-  duration:duration,
-  area:Math.round(estimated*100)/100
- };
-
- const history=getHistory();
- history.unshift(record);
- const saved=saveHistory(history.slice(0,50));
-
- if(saved){
-  renderHistory();
-  say("Session stopped. Distance: "+formatDistance(totalDistance)+
-   ". Estimated area: "+formatArea(estimated)+
-   ". Mission saved to history. This is only a rough GPS estimate, not an official territory claim.");
- }else{
-  say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
- }
+ const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+String(elapsedSeconds%60).padStart(2,"0");
+ const record={date:new Date().toLocaleString(),distance:Math.round(estimated*100)/100};
+ const history=getHistory();history.unshift(record);
+ if(saveHistory(history.slice(0,50))){renderHistory();say("Session stopped. Distance: "+formatDistance(totalDistance)+". Estimated area: "+formatArea(estimated)+". Mission saved to history. This is only a rough GPS estimate.");}
+ else say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
 }
-
+function showChallenges(){
+ const box=document.getElementById("challengeInfo");box.style.display="block";
+ box.textContent="Challenges are planned for a future version. Multiplayer is not connected yet.";
+}
 renderHistory();
-
-window.addEventListener("load", function () {
- initMap();
-});
-
-function showChallenges() {
- const box = document.getElementById("challengeInfo");
- box.style.display = "block";
- box.textContent =
-  "Challenges are planned for a future version. Multiplayer is not connected yet.";
-}
+window.addEventListener("load",initMap);
 </script>
 </body>
 </html>
