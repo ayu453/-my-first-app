@@ -91,7 +91,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
 <div class="panel">
   <div class="eyebrow">GPS ROUTE RECORDING</div>
   <p>Tap START MISSION to request location permission. Tap again to stop recording.</p>
-  <div class="controls"><button id="toggleBtn" onclick="toggleTracking()">START MISSION</button></div>
+  <div class="controls"><button id="toggleBtn" onclick="toggleTracking()">START MISSION</button><button id="captureBtn" class="secondary" onclick="captureTerritory()" disabled>CAPTURE TERRITORY</button></div>
   <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
   <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings. You do not need to travel anywhere just to test the map.</p>
 </div>
@@ -128,6 +128,14 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <p class="note">History is stored on this device and is not shared with other players. Clearing browser data may remove it.</p>
 </div>
 
+<h3>🟩 Captured territories</h3>
+<div class="panel">
+  <div class="eyebrow">SAVED ON THIS DEVICE</div>
+  <p>Territories captured in this prototype appear on the map in green. Captures are stored in this browser only; they are not official or shared with other players.</p>
+  <div id="territoryList" aria-live="polite"><div class="empty">No territories captured yet.</div></div>
+  <div class="history-actions"><button class="danger" onclick="clearTerritories()">CLEAR TERRITORIES</button></div>
+</div>
+
 <h3>⚔️ Challenge arena</h3>
 <div class="panel">
   <h2>Compete through movement</h2>
@@ -150,6 +158,7 @@ let storageAvailable = true;
 let is3D = true;
 const HISTORY_KEY = "projectAtlasMissionHistoryV1";
 const XP_KEY = "projectAtlasXPV1";
+const TERRITORY_KEY = "projectAtlasTerritoriesV1";
 const MISSION_XP_REWARD = 10;
 const routeSourceId = "atlas-route";
 const routeLayerId = "atlas-route-line";
@@ -231,7 +240,9 @@ map.addLayer({
     console.warn("3D building layer could not be added",e);
     setMapStatus("Map ready · 3D building data unavailable here");
    }
+   addTerritoryLayers();
    addRouteLayers();
+   renderTerritories();
   });
   map.on("error",e=>{console.warn("Map error",e.error||e);});
  }catch(error){
@@ -286,6 +297,78 @@ function updateTimer(){
  const seconds=Math.floor((Date.now()-startedAt)/1000);
  document.getElementById("duration").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
 }
+function getTerritories(){
+ try{
+  const raw=localStorage.getItem(TERRITORY_KEY);
+  if(!raw)return [];
+  const items=JSON.parse(raw);
+  return Array.isArray(items)?items.filter(item=>item&&Array.isArray(item.coordinates)&&item.coordinates.length>=4):[];
+ }catch(error){storageAvailable=false;return [];}
+}
+function saveTerritories(items){
+ try{localStorage.setItem(TERRITORY_KEY,JSON.stringify(items));storageAvailable=true;return true;}
+ catch(error){storageAvailable=false;return false;}
+}
+function addTerritoryLayers(){
+ if(!map||map.getSource("atlas-territories"))return;
+ map.addSource("atlas-territories",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+ map.addLayer({id:"atlas-territories-fill",type:"fill",source:"atlas-territories",paint:{"fill-color":"#36e58c","fill-opacity":0.28}});
+ map.addLayer({id:"atlas-territories-outline",type:"line",source:"atlas-territories",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#18b96b","line-width":3,"line-opacity":0.95}});
+}
+function updateTerritoriesOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource("atlas-territories"))return;
+ const features=getTerritories().map((item,index)=>({
+  type:"Feature",
+  properties:{id:item.id||String(index+1),area:item.area||0},
+  geometry:{type:"Polygon",coordinates:[item.coordinates]}
+ }));
+ map.getSource("atlas-territories").setData({type:"FeatureCollection",features});
+}
+function renderTerritories(){
+ const container=document.getElementById("territoryList");
+ if(!container)return;
+ const territories=getTerritories();
+ container.replaceChildren();
+ if(!territories.length){container.innerHTML='<div class="empty">No territories captured yet. Record a route, stop the mission, then capture it.</div>';}
+ else{
+  territories.forEach((item,index)=>{
+   const card=document.createElement("div");card.className="history-item";
+   const title=document.createElement("h4");title.textContent="TERRITORY "+(index+1);card.appendChild(title);
+   const date=document.createElement("p");date.textContent="Captured: "+(item.date||"Unknown date");card.appendChild(date);
+   const area=document.createElement("p");area.textContent="Estimated area: "+formatArea(Number(item.area));card.appendChild(area);
+   container.appendChild(card);
+  });
+ }
+ const captureBtn=document.getElementById("captureBtn");
+ if(captureBtn){captureBtn.disabled=recording||route.length<4||!Number.isFinite(estimateArea(route))||estimateArea(route)<=0;}
+}
+function captureTerritory(){
+ if(recording){say("Stop the mission before capturing this territory.");return;}
+ if(route.length<4){say("At least 4 reliable GPS points are needed before territory capture.");return;}
+ const area=estimateArea(route);
+ if(!Number.isFinite(area)||area<25){say("The estimated area is too small or unreliable to capture. Record a wider, safe route and try again.");return;}
+ const coords=route.map(point=>[point.lon,point.lat]);
+ const first=coords[0],last=coords[coords.length-1];
+ if(first[0]!==last[0]||first[1]!==last[1])coords.push([first[0],first[1]]);
+ const territories=getTerritories();
+ const territory={id:"territory-"+Date.now(),date:new Date().toLocaleString(),area:Math.round(area*100)/100,coordinates:coords};
+ territories.unshift(territory);
+ if(!saveTerritories(territories.slice(0,50))){say("Territory could not be saved. Browser storage may be unavailable.");return;}
+ updateTerritoriesOnMap();
+ renderTerritories();
+ if(map&&coords.length){map.fitBounds(coords.reduce((bounds,coord)=>bounds.extend(coord),new maplibregl.LngLatBounds(coords[0],coords[0])),{padding:70,maxZoom:17,duration:900});}
+ say("Territory captured on this device! Estimated area: "+formatArea(area)+". This is a local prototype, not official or multiplayer ownership.");
+}
+function clearTerritories(){
+ const territories=getTerritories();
+ if(!territories.length){say("There are no saved territories to clear.");return;}
+ if(!confirm("Clear all territories saved in this browser? This cannot be undone."))return;
+ if(!saveTerritories([])){say("Territories could not be cleared because browser storage is unavailable.");return;}
+ updateTerritoriesOnMap();
+ renderTerritories();
+ say("Saved territories cleared from this browser.");
+}
+
 function addRouteLayers(){
  if(!map||map.getSource(routeSourceId))return;
  map.addSource(routeSourceId,{type:"geojson",data:{type:"Feature",geometry:{type:"LineString",coordinates:[]},properties:{}}});
@@ -301,7 +384,7 @@ function updateRouteOnMap(){
  map.getSource(routePointSourceId).setData({type:"FeatureCollection",features:route.map((p,i)=>({type:"Feature",properties:{index:i},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))});
 }
 
- function startTracking(){
+function startTracking(){
  if(recording)return;
 
  if(!navigator.geolocation){
@@ -316,6 +399,124 @@ function updateRouteOnMap(){
 
  route=[];
  totalDistance=0;
+ const captureBtn=document.getElementById("captureBtn");
+ if(captureBtn)captureBtn.disabled=true;
+ startedAt=Date.now();
+
+ document.getElementById("distance").textContent="0 m";
+ document.getElementById("duration").textContent="00:00";
+ document.getElementById("area").textContent="Waiting for GPS…";
+ document.getElementById("points").textContent=route.length;
+}
+function updateTimer(){
+ if(!startedAt)return;
+ const seconds=Math.floor((Date.now()-startedAt)/1000);
+ document.getElementById("duration").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
+}
+function getTerritories(){
+ try{
+  const raw=localStorage.getItem(TERRITORY_KEY);
+  if(!raw)return [];
+  const items=JSON.parse(raw);
+  return Array.isArray(items)?items.filter(item=>item&&Array.isArray(item.coordinates)&&item.coordinates.length>=4):[];
+ }catch(error){storageAvailable=false;return [];}
+}
+function saveTerritories(items){
+ try{localStorage.setItem(TERRITORY_KEY,JSON.stringify(items));storageAvailable=true;return true;}
+ catch(error){storageAvailable=false;return false;}
+}
+function addTerritoryLayers(){
+ if(!map||map.getSource("atlas-territories"))return;
+ map.addSource("atlas-territories",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+ map.addLayer({id:"atlas-territories-fill",type:"fill",source:"atlas-territories",paint:{"fill-color":"#36e58c","fill-opacity":0.28}});
+ map.addLayer({id:"atlas-territories-outline",type:"line",source:"atlas-territories",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#18b96b","line-width":3,"line-opacity":0.95}});
+}
+function updateTerritoriesOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource("atlas-territories"))return;
+ const features=getTerritories().map((item,index)=>({
+  type:"Feature",
+  properties:{id:item.id||String(index+1),area:item.area||0},
+  geometry:{type:"Polygon",coordinates:[item.coordinates]}
+ }));
+ map.getSource("atlas-territories").setData({type:"FeatureCollection",features});
+}
+function renderTerritories(){
+ const container=document.getElementById("territoryList");
+ if(!container)return;
+ const territories=getTerritories();
+ container.replaceChildren();
+ if(!territories.length){container.innerHTML='<div class="empty">No territories captured yet. Record a route, stop the mission, then capture it.</div>';}
+ else{
+  territories.forEach((item,index)=>{
+   const card=document.createElement("div");card.className="history-item";
+   const title=document.createElement("h4");title.textContent="TERRITORY "+(index+1);card.appendChild(title);
+   const date=document.createElement("p");date.textContent="Captured: "+(item.date||"Unknown date");card.appendChild(date);
+   const area=document.createElement("p");area.textContent="Estimated area: "+formatArea(Number(item.area));card.appendChild(area);
+   container.appendChild(card);
+  });
+ }
+ const captureBtn=document.getElementById("captureBtn");
+ if(captureBtn){captureBtn.disabled=recording||route.length<4||!Number.isFinite(estimateArea(route))||estimateArea(route)<=0;}
+}
+function captureTerritory(){
+ if(recording){say("Stop the mission before capturing this territory.");return;}
+ if(route.length<4){say("At least 4 reliable GPS points are needed before territory capture.");return;}
+ const area=estimateArea(route);
+ if(!Number.isFinite(area)||area<25){say("The estimated area is too small or unreliable to capture. Record a wider, safe route and try again.");return;}
+ const coords=route.map(point=>[point.lon,point.lat]);
+ const first=coords[0],last=coords[coords.length-1];
+ if(first[0]!==last[0]||first[1]!==last[1])coords.push([first[0],first[1]]);
+ const territories=getTerritories();
+ const territory={id:"territory-"+Date.now(),date:new Date().toLocaleString(),area:Math.round(area*100)/100,coordinates:coords};
+ territories.unshift(territory);
+ if(!saveTerritories(territories.slice(0,50))){say("Territory could not be saved. Browser storage may be unavailable.");return;}
+ updateTerritoriesOnMap();
+ renderTerritories();
+ if(map&&coords.length){map.fitBounds(coords.reduce((bounds,coord)=>bounds.extend(coord),new maplibregl.LngLatBounds(coords[0],coords[0])),{padding:70,maxZoom:17,duration:900});}
+ say("Territory captured on this device! Estimated area: "+formatArea(area)+". This is a local prototype, not official or multiplayer ownership.");
+}
+function clearTerritories(){
+ const territories=getTerritories();
+ if(!territories.length){say("There are no saved territories to clear.");return;}
+ if(!confirm("Clear all territories saved in this browser? This cannot be undone."))return;
+ if(!saveTerritories([])){say("Territories could not be cleared because browser storage is unavailable.");return;}
+ updateTerritoriesOnMap();
+ renderTerritories();
+ say("Saved territories cleared from this browser.");
+}
+
+function addRouteLayers(){
+ if(!map||map.getSource(routeSourceId))return;
+ map.addSource(routeSourceId,{type:"geojson",data:{type:"Feature",geometry:{type:"LineString",coordinates:[]},properties:{}}});
+ map.addLayer({id:routeLayerId,type:"line",source:routeSourceId,layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#00b879","line-width":5,"line-opacity":0.95}});
+ map.addSource(routePointSourceId,{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+ map.addLayer({id:"atlas-route-points-layer",type:"circle",source:routePointSourceId,paint:{"circle-radius":7,"circle-color":"#178cff","circle-stroke-color":"#ffffff","circle-stroke-width":2}});
+ updateRouteOnMap();
+}
+function updateRouteOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource(routeSourceId)||!map.getSource(routePointSourceId))return;
+ const coords=route.map(p=>[p.lon,p.lat]);
+ map.getSource(routeSourceId).setData({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:coords.length?coords:[[0,0]]}});
+ map.getSource(routePointSourceId).setData({type:"FeatureCollection",features:route.map((p,i)=>({type:"Feature",properties:{index:i},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))});
+}
+
+function startTracking(){
+ if(recording)return;
+
+ if(!navigator.geolocation){
+  say("GPS is not available in this browser.");
+  return;
+ }
+
+ if(!window.isSecureContext){
+  say("GPS requires HTTPS. Open the published GitHub Pages website.");
+  return;
+ }
+
+ route=[];
+ totalDistance=0;
+ const captureBtn=document.getElementById("captureBtn");
+ if(captureBtn)captureBtn.disabled=true;
  startedAt=Date.now();
 
  document.getElementById("distance").textContent="0 m";
@@ -380,6 +581,8 @@ function updateRouteOnMap(){
    }
 
    route.push(point);
+   const captureBtn=document.getElementById("captureBtn");
+   if(captureBtn)captureBtn.disabled=true;
    updateDistance();
    updateRouteOnMap();
 
@@ -432,14 +635,29 @@ function estimateArea(points){
  return Math.abs(sum)/2;
 }
 function getXP(){
- try{const value=Number(localStorage.getItem(XP_KEY));return Number.isFinite(value)&&value>=0?Math.floor(value):0;}
- catch(error){storageAvailable=false;return 0;}
+ try{
+  const value=Number(localStorage.getItem(XP_KEY)||0);
+  return Number.isFinite(value)&&value>=0?Math.floor(value):0;
+ }catch(error){
+  storageAvailable=false;
+  return 0;
+ }
 }
-function renderXP(){document.getElementById("xp").textContent=getXP()+" XP";}
+function renderXP(){
+ const el=document.getElementById("xp");
+ if(el)el.textContent=getXP()+" XP";
+}
 function awardMissionXP(){
- const nextXP=getXP()+MISSION_XP_REWARD;
- try{localStorage.setItem(XP_KEY,String(nextXP));storageAvailable=true;renderXP();return true;}
- catch(error){storageAvailable=false;return false;}
+ try{
+  const nextXP=getXP()+MISSION_XP_REWARD;
+  localStorage.setItem(XP_KEY,String(nextXP));
+  storageAvailable=true;
+  renderXP();
+  return true;
+ }catch(error){
+  storageAvailable=false;
+  return false;
+ }
 }
 function getHistory(){
  try{const raw=localStorage.getItem(HISTORY_KEY);if(!raw)return [];const data=JSON.parse(raw);return Array.isArray(data)?data:[];}
@@ -456,7 +674,7 @@ function renderHistory(){
  history.forEach((item,index)=>{
   const card=document.createElement("div");card.className="history-item";
   const title=document.createElement("h4");title.textContent="MISSION "+(history.length-index);card.appendChild(title);
-  for(const [label,value] of [["Date",item.date], ["Distance",formatDistance(Number(item.distance)||0)], ["Duration",item.duration||"Unavailable"], ["Estimated area",formatArea(Number.isFinite(Number(item.area))?Number(item.area):null)]]){
+  for(const [label,value] of [["Date",item.date],["Distance",formatDistance(item.distance)],["Duration",item.duration],["Estimated area",formatArea(item.area)]]){
    const p=document.createElement("p");p.textContent=label+": "+value;card.appendChild(p);
   }
   container.appendChild(card);
@@ -475,20 +693,25 @@ function stopTracking(fromError=false,errorMessage=""){
  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
  if(timerId!==null){clearInterval(timerId);timerId=null;}
  setButton(false);updateTimer();
- if(fromError){document.getElementById("missionStatus").textContent="INTERRUPTED";document.getElementById("area").textContent="Unavailable";say(errorMessage+" This session was not saved to history.");return;}
+ if(fromError){document.getElementById("missionStatus").textContent="INTERRUPTED";document.getElementById("area").textContent="Unavailable";const captureBtn=document.getElementById("captureBtn");if(captureBtn)captureBtn.disabled=true;say(errorMessage+" This session was not saved to history.");return;}
  document.getElementById("missionStatus").textContent="FINISHED";
- if(route.length<4){document.getElementById("area").textContent="Unavailable";say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");return;}
+ if(route.length<4){document.getElementById("area").textContent="Unavailable";const captureBtn=document.getElementById("captureBtn");if(captureBtn)captureBtn.disabled=true;say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");return;}
  const estimated=estimateArea(route);
  if(estimated===null||!Number.isFinite(estimated)){document.getElementById("area").textContent="Unavailable";say("Session stopped, but the area could not be estimated. This session was not saved.");return;}
  document.getElementById("area").textContent=formatArea(estimated);
+ const captureBtn=document.getElementById("captureBtn");
+ if(captureBtn)captureBtn.disabled=false;
  const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
  const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+String(elapsedSeconds%60).padStart(2,"0");
- const record={date:new Date().toLocaleString(),distance:Math.round(totalDistance*100)/100,duration:duration,area:Math.round(estimated*100)/100,xp:MISSION_XP_REWARD};
+ const record={date:new Date().toLocaleString(),distance:Math.round(estimated*100)/100};
  const history=getHistory();history.unshift(record);
  if(saveHistory(history.slice(0,50))){
   renderHistory();
-  if(awardMissionXP())say("Mission saved! +"+MISSION_XP_REWARD+" XP earned. Distance: "+formatDistance(totalDistance)+". Estimated area: "+formatArea(estimated)+". This is only a rough GPS estimate.");
-  else say("Mission saved to history, but XP could not be saved in browser storage.");
+  if(awardMissionXP()){
+   say("Session stopped. You earned "+MISSION_XP_REWARD+" XP. Total XP: "+getXP()+". Estimated area: "+formatArea(estimated)+". Mission saved to history. This is only a rough GPS estimate.");
+  }else{
+   say("Mission saved, but XP could not be saved because browser storage is unavailable.");
+  }
  }
  else say("Session stats were calculated, but browser storage is unavailable, so the mission was not saved and no XP was awarded.");
 }
@@ -496,8 +719,9 @@ function showChallenges(){
  const box=document.getElementById("challengeInfo");box.style.display="block";
  box.textContent="Challenges are planned for a future version. Multiplayer is not connected yet.";
 }
-renderHistory();
 renderXP();
+renderHistory();
+renderTerritories();
 window.addEventListener("load",initMap);
 </script>
 </body>
