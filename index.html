@@ -187,23 +187,42 @@ function initMap(){
     for(const layer of layers){
      if(layer.type==="symbol" && layer.layout && layer.layout["text-field"]){labelLayerId=layer.id;break;}
     }
-    map.addLayer({
-     id:"atlas-3d-buildings",
-     source:"openfreemap-buildings",
-     "source-layer":"building",
-     type:"fill-extrusion",
-     minzoom:14,
-     filter:["!=",["get","hide_3d"],true],
-     paint:{
-      "fill-extrusion-color":[
-       "interpolate",["linear"],["coalesce",["get","render_height"],["get","height"],10],
-       0,"#d8e1e8",30,"#b8cbd5",100,"#9eb7c6"
-      ],
-      "fill-extrusion-height":["interpolate",["linear"],["zoom"],14,0,15,["coalesce",["get","render_height"],["get","height"],8]],
-      "fill-extrusion-base":["coalesce",["get","render_min_height"],["get","min_height"],0],
-      "fill-extrusion-opacity":0.92
-     }
-    },labelLayerId);
+    
+map.addLayer({
+  id: "atlas-3d-buildings",
+  source: "openfreemap-buildings",
+  "source-layer": "building",
+  type: "fill-extrusion",
+  minzoom: 13,
+  filter: ["!=", ["get", "hide_3d"], true],
+  paint: {
+    "fill-extrusion-color": [
+      "interpolate",
+      ["linear"],
+      ["coalesce", ["get", "render_height"], ["get", "height"], 8],
+      0, "#d8e1e8",
+      20, "#b8cbd5",
+      80, "#8ba9bb",
+      200, "#668ba5"
+    ],
+    "fill-extrusion-height": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      13, 0,
+      15, ["coalesce", ["get", "render_height"], ["get", "height"], 8]
+    ],
+    "fill-extrusion-base": [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      13, 0,
+      15, ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0]
+    ],
+    "fill-extrusion-opacity": 0.95
+  }
+}, labelLayerId);
+    
     setMapStatus("Colourful map ready · 3D buildings appear when data is available");
    }catch(e){
     console.warn("3D building layer could not be added",e);
