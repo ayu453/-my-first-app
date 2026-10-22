@@ -34,11 +34,18 @@ h3{font-size:18px;margin:25px 0 13px}
 button{border:0;border-radius:10px;padding:14px;background:#54f5a5;color:#07120c;font-size:14px;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.55;cursor:not-allowed}
 .secondary{background:#202c3b;color:white;border:1px solid #344154}
+.danger{background:#49252d;color:#ffd5dc;border:1px solid #70404a}
 .controls{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
 .controls button{width:100%;min-height:49px}
 .status{margin-top:14px;background:#0d151f;border-radius:10px;padding:13px;font-size:13px;line-height:1.6;color:#d0dce7;overflow-wrap:anywhere}
 .note{font-size:11px;margin-top:12px}
 .panel p{margin-top:9px}
+.history-item{background:#0d151f;border:1px solid #263448;border-radius:10px;padding:13px;margin-top:10px}
+.history-item h4{font-size:14px;margin-bottom:8px;color:#54f5a5}
+.history-item p{font-size:12px;margin-top:4px}
+.history-actions{margin-top:14px}
+.history-actions button{width:100%}
+.empty{font-size:13px;color:#aab8c9;padding:14px 0}
 footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-height:1.6}
 </style>
 </head>
@@ -64,22 +71,35 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 <div class="panel">
   <div class="eyebrow">YOUR OBJECTIVE</div>
   <h2 style="margin-top:10px">Explore. Move. Map.</h2>
-  <p>Record a route in a safe, permitted area. Atlas will estimate your distance and may estimate the enclosed area from your GPS route.</p>
+  <p>Record a route in a safe, permitted area. Atlas estimates your distance and may estimate the enclosed area from your GPS route.</p>
   <div class="status">
     <strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>
-    This prototype records a movement session. It does not capture or assign real territory.
+    This prototype does not capture or assign real territory.
   </div>
 </div>
 
 <h3>📍 Movement session</h3>
 <div class="panel">
   <div class="eyebrow">GPS ROUTE RECORDING</div>
-  <p>Tap START MISSION to request location permission. Tap the same button again to stop recording and calculate an estimate.</p>
+  <p>Tap START MISSION to request location permission. Tap the same button again to stop recording.</p>
   <div class="controls">
     <button id="toggleBtn" onclick="toggleTracking()">START MISSION</button>
   </div>
   <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
-  <p class="note">Use only in safe, permitted places. Keep aware of traffic and your surroundings. Never enter private property to record a route.</p>
+  <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings.</p>
+</div>
+
+<h3>📚 Mission history</h3>
+<div class="panel">
+  <div class="eyebrow">YOUR COMPLETED SESSIONS</div>
+  <p>Completed sessions are saved in this browser. Only the date, distance, duration and estimated area are stored—not GPS coordinates.</p>
+  <div id="historyList" aria-live="polite">
+    <div class="empty">Loading mission history…</div>
+  </div>
+  <div class="history-actions">
+    <button class="danger" onclick="clearHistory()">CLEAR HISTORY</button>
+  </div>
+  <p class="note">History is stored on this device and is not shared with other players. Clearing browser data may remove it.</p>
 </div>
 
 <h3>🗺️ Interactive territory map</h3>
@@ -108,7 +128,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 
 <footer>
 PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>
-GPS recording requires your permission. Route points stay in this page session.<br>
+GPS recording requires permission. Mission history is stored locally in this browser.<br>
 No live multiplayer, server validation, or official territory capture yet.
 </footer>
 
@@ -119,7 +139,9 @@ let route = [];
 let totalDistance = 0;
 let startedAt = 0;
 let timerId = null;
-let lastAreaEstimate = null;
+let storageAvailable = true;
+
+const HISTORY_KEY = "projectAtlasMissionHistoryV1";
 
 const zones = [
  {name:"Emerald Zone",type:"YOUR SAMPLE TERRITORY",owner:"Owner: You (demo)",info:"Green sample territory. Real ownership is not connected."},
@@ -199,16 +221,17 @@ function startTracking(){
 
  route=[];
  totalDistance=0;
- lastAreaEstimate=null;
  startedAt=Date.now();
- recording=true;
 
+ document.getElementById("distance").textContent="0 m";
+ document.getElementById("duration").textContent="00:00";
  document.getElementById("area").textContent="Recording…";
+ document.getElementById("points").textContent="0";
  document.getElementById("missionStatus").textContent="IN PROGRESS";
- setButton(true);
- updateDistance();
- updateTimer();
 
+ recording=true;
+ setButton(true);
+ updateTimer();
  timerId=setInterval(updateTimer,1000);
  say("Requesting GPS permission…");
 
@@ -234,7 +257,6 @@ function startTracking(){
 
    if(last){
     const step=distanceBetween(last,point);
-
     if(step<3)return;
 
     if(step>500){
@@ -250,10 +272,9 @@ function startTracking(){
    say("Recording route… "+route.length+" GPS points collected.");
   },error=>{
    let message="GPS error.";
-   if(error.code===1)message="Location permission was denied. Allow location access in your browser settings to use GPS.";
-   if(error.code===2)message="Your location could not be determined. Try again later in a safe place.";
+   if(error.code===1)message="Location permission was denied. Check browser location settings.";
+   if(error.code===2)message="Your location could not be determined. Try again later.";
    if(error.code===3)message="GPS request timed out. You can try START MISSION again.";
-
    stopTracking(true,message);
   },{
    enableHighAccuracy:true,
@@ -279,13 +300,104 @@ function estimateArea(points){
  }));
 
  let sum=0;
-
  for(let i=0;i<xy.length;i++){
   const j=(i+1)%xy.length;
   sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;
  }
 
  return Math.abs(sum)/2;
+}
+
+function formatDistance(d){
+ return d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";
+}
+
+function formatArea(a){
+ if(a===null||!Number.isFinite(a))return "Unavailable";
+ return a>=10000?(a/10000).toFixed(2)+" ha":Math.round(a)+" m²";
+}
+
+function getHistory(){
+ try{
+  const raw=localStorage.getItem(HISTORY_KEY);
+  if(!raw)return [];
+  const data=JSON.parse(raw);
+  return Array.isArray(data)?data:[];
+ }catch(error){
+  storageAvailable=false;
+  return [];
+ }
+}
+
+function saveHistory(history){
+ try{
+  localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
+  storageAvailable=true;
+  return true;
+ }catch(error){
+  storageAvailable=false;
+  return false;
+ }
+}
+
+function renderHistory(){
+ const container=document.getElementById("historyList");
+ const history=getHistory();
+
+ if(!history.length){
+  container.innerHTML='<div class="empty">No completed missions yet. Finish a session with enough GPS points to save it here.</div>';
+  return;
+ }
+
+ container.replaceChildren();
+
+ history.forEach((item,index)=>{
+  const card=document.createElement("div");
+  card.className="history-item";
+
+  const title=document.createElement("h4");
+  title.textContent="MISSION "+(history.length-index);
+  card.appendChild(title);
+
+  const date=document.createElement("p");
+  date.textContent="Date: "+item.date;
+  card.appendChild(date);
+
+  const distance=document.createElement("p");
+  distance.textContent="Distance: "+formatDistance(item.distance);
+  card.appendChild(distance);
+
+  const duration=document.createElement("p");
+  duration.textContent="Duration: "+item.duration;
+  card.appendChild(duration);
+
+  const area=document.createElement("p");
+  area.textContent="Estimated area: "+formatArea(item.area);
+  card.appendChild(area);
+
+  container.appendChild(card);
+ });
+}
+
+function clearHistory(){
+ const history=getHistory();
+
+ if(!history.length){
+  say("There is no mission history to clear.");
+  return;
+ }
+
+ if(!confirm("Clear all saved mission history from this browser? This cannot be undone.")){
+  return;
+ }
+
+ if(!saveHistory([])){
+  say("History could not be cleared. Browser storage may be unavailable.");
+  return;
+ }
+
+ renderHistory();
+ say("Mission history cleared from this browser.");
 }
 
 function stopTracking(fromError=false,errorMessage=""){
@@ -304,14 +416,20 @@ function stopTracking(fromError=false,errorMessage=""){
  }
 
  setButton(false);
- document.getElementById("missionStatus").textContent="FINISHED";
  updateTimer();
+
+ if(fromError){
+  document.getElementById("missionStatus").textContent="INTERRUPTED";
+  document.getElementById("area").textContent="Unavailable";
+  say(errorMessage+" This session was not saved to history.");
+  return;
+ }
+
+ document.getElementById("missionStatus").textContent="FINISHED";
 
  if(route.length<4){
   document.getElementById("area").textContent="Unavailable";
-
-  say(errorMessage || (fromError?"GPS stopped. ":"Session stopped. ")+
-   "Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. No territory was captured.");
+  say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");
   return;
  }
 
@@ -319,27 +437,38 @@ function stopTracking(fromError=false,errorMessage=""){
 
  if(estimated===null||!Number.isFinite(estimated)){
   document.getElementById("area").textContent="Unavailable";
-  say("Session stopped, but the area could not be estimated.");
+  say("Session stopped, but the area could not be estimated. This session was not saved.");
   return;
  }
 
- lastAreaEstimate=estimated;
+ document.getElementById("area").textContent=formatArea(estimated);
 
- document.getElementById("area").textContent=
-  estimated>=10000?(estimated/10000).toFixed(2)+" ha":Math.round(estimated)+" m²";
+ const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
+ const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+
+  String(elapsedSeconds%60).padStart(2,"0");
 
- const distanceText=totalDistance>=1000
-  ?(totalDistance/1000).toFixed(2)+" km"
-  :Math.round(totalDistance)+" m";
+ const record={
+  date:new Date().toLocaleString(),
+  distance:Math.round(totalDistance*100)/100,
+  duration:duration,
+  area:Math.round(estimated*100)/100
+ };
 
- const areaText=estimated>=10000
-  ?(estimated/10000).toFixed(2)+" hectares"
-  :Math.round(estimated)+" m²";
+ const history=getHistory();
+ history.unshift(record);
+ const saved=saveHistory(history.slice(0,50));
 
- say("Session stopped. Distance: "+distanceText+
-  ". Estimated enclosed area: "+areaText+
-  ". This is a rough GPS estimate, not an official territory claim. GPS noise, route shape, or crossing paths can make it inaccurate.");
+ if(saved){
+  renderHistory();
+  say("Session stopped. Distance: "+formatDistance(totalDistance)+
+   ". Estimated area: "+formatArea(estimated)+
+   ". Mission saved to history. This is only a rough GPS estimate, not an official territory claim.");
+ }else{
+  say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
+ }
 }
+
+renderHistory();
 </script>
 </body>
 </html>
