@@ -19,7 +19,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .eyebrow{font-size:11px;letter-spacing:2px;color:var(--green);font-weight:bold}
 h1{font-size:clamp(32px,5vw,54px);line-height:1.12;margin:14px 0}
 p{color:var(--muted);font-size:14px;line-height:1.6}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:22px 0}
 .stat,.panel,.details{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;min-width:0}
 .stat small{color:#9ba9bb;font-size:11px}
 .stat h2{margin-top:9px;font-size:clamp(18px,2.5vw,26px);overflow-wrap:anywhere}
@@ -76,6 +76,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <div class="stat"><small>SESSION TIME</small><h2 id="duration">00:00</h2></div>
   <div class="stat"><small>ESTIMATED AREA</small><h2 id="area">— m²</h2></div>
   <div class="stat"><small>GPS POINTS</small><h2 id="points">0</h2></div>
+  <div class="stat"><small>ATLAS XP</small><h2 id="xp">0 XP</h2></div>
 </div>
 
 <h3>🎯 Mission briefing</h3>
@@ -148,6 +149,8 @@ let timerId = null;
 let storageAvailable = true;
 let is3D = true;
 const HISTORY_KEY = "projectAtlasMissionHistoryV1";
+const XP_KEY = "projectAtlasXPV1";
+const MISSION_XP_REWARD = 10;
 const routeSourceId = "atlas-route";
 const routeLayerId = "atlas-route-line";
 const routePointSourceId = "atlas-route-points";
@@ -298,7 +301,7 @@ function updateRouteOnMap(){
  map.getSource(routePointSourceId).setData({type:"FeatureCollection",features:route.map((p,i)=>({type:"Feature",properties:{index:i},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))});
 }
 
-function startTracking(){
+ function startTracking(){
  if(recording)return;
 
  if(!navigator.geolocation){
@@ -428,6 +431,16 @@ function estimateArea(points){
  for(let i=0;i<xy.length;i++){const j=(i+1)%xy.length;sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;}
  return Math.abs(sum)/2;
 }
+function getXP(){
+ try{const value=Number(localStorage.getItem(XP_KEY));return Number.isFinite(value)&&value>=0?Math.floor(value):0;}
+ catch(error){storageAvailable=false;return 0;}
+}
+function renderXP(){document.getElementById("xp").textContent=getXP()+" XP";}
+function awardMissionXP(){
+ const nextXP=getXP()+MISSION_XP_REWARD;
+ try{localStorage.setItem(XP_KEY,String(nextXP));storageAvailable=true;renderXP();return true;}
+ catch(error){storageAvailable=false;return false;}
+}
 function getHistory(){
  try{const raw=localStorage.getItem(HISTORY_KEY);if(!raw)return [];const data=JSON.parse(raw);return Array.isArray(data)?data:[];}
  catch(error){storageAvailable=false;return [];}
@@ -443,7 +456,7 @@ function renderHistory(){
  history.forEach((item,index)=>{
   const card=document.createElement("div");card.className="history-item";
   const title=document.createElement("h4");title.textContent="MISSION "+(history.length-index);card.appendChild(title);
-  for(const [label,value] of [["Date",item.date],["Distance",formatDistance(item.distance)],["Duration",item.duration],["Estimated area",formatArea(item.area)]]){
+  for(const [label,value] of [["Date",item.date], ["Distance",formatDistance(Number(item.distance)||0)], ["Duration",item.duration||"Unavailable"], ["Estimated area",formatArea(Number.isFinite(Number(item.area))?Number(item.area):null)]]){
    const p=document.createElement("p");p.textContent=label+": "+value;card.appendChild(p);
   }
   container.appendChild(card);
@@ -470,16 +483,21 @@ function stopTracking(fromError=false,errorMessage=""){
  document.getElementById("area").textContent=formatArea(estimated);
  const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
  const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+String(elapsedSeconds%60).padStart(2,"0");
- const record={date:new Date().toLocaleString(),distance:Math.round(estimated*100)/100};
+ const record={date:new Date().toLocaleString(),distance:Math.round(totalDistance*100)/100,duration:duration,area:Math.round(estimated*100)/100,xp:MISSION_XP_REWARD};
  const history=getHistory();history.unshift(record);
- if(saveHistory(history.slice(0,50))){renderHistory();say("Session stopped. Distance: "+formatDistance(totalDistance)+". Estimated area: "+formatArea(estimated)+". Mission saved to history. This is only a rough GPS estimate.");}
- else say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
+ if(saveHistory(history.slice(0,50))){
+  renderHistory();
+  if(awardMissionXP())say("Mission saved! +"+MISSION_XP_REWARD+" XP earned. Distance: "+formatDistance(totalDistance)+". Estimated area: "+formatArea(estimated)+". This is only a rough GPS estimate.");
+  else say("Mission saved to history, but XP could not be saved in browser storage.");
+ }
+ else say("Session stats were calculated, but browser storage is unavailable, so the mission was not saved and no XP was awarded.");
 }
 function showChallenges(){
  const box=document.getElementById("challengeInfo");box.style.display="block";
  box.textContent="Challenges are planned for a future version. Multiplayer is not connected yet.";
 }
 renderHistory();
+renderXP();
 window.addEventListener("load",initMap);
 </script>
 </body>
