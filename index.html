@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1018">
 <title>Project Atlas</title>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#0b1018;color:#f4f7fb;padding:18px}
+body{font-family:Arial,sans-serif;background:#0b1018;color:#f4f7fb;padding:18px;max-width:850px;margin:auto}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
 .logo{font-size:21px;font-weight:900;letter-spacing:1px}
 .green{color:#54f5a5}
@@ -30,16 +32,17 @@ h3{font-size:18px;margin:25px 0 13px}
 .details h2{margin:10px 0;font-size:21px}
 .details p{margin-top:7px}
 button{border:0;border-radius:10px;padding:14px;background:#54f5a5;color:#07120c;font-size:14px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.4;cursor:not-allowed}
+button:disabled{opacity:.55;cursor:not-allowed}
 .secondary{background:#202c3b;color:white;border:1px solid #344154}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
-.controls button{width:100%}
+.controls{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
+.controls button{width:100%;min-height:49px}
 .status{margin-top:14px;background:#0d151f;border-radius:10px;padding:13px;font-size:13px;line-height:1.6;color:#d0dce7;overflow-wrap:anywhere}
 .note{font-size:11px;margin-top:12px}
 .panel p{margin-top:9px}
 footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-height:1.6}
 </style>
 </head>
+
 <body>
 <header>
   <div class="logo">PROJECT <span class="green">ATLAS</span></div>
@@ -57,16 +60,26 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
   <div class="stat"><small>GPS POINTS</small><h2 id="points">0</h2></div>
 </div>
 
+<h3>🎯 Mission briefing</h3>
+<div class="panel">
+  <div class="eyebrow">YOUR OBJECTIVE</div>
+  <h2 style="margin-top:10px">Explore. Move. Map.</h2>
+  <p>Record a route in a safe, permitted area. Atlas will estimate your distance and may estimate the enclosed area from your GPS route.</p>
+  <div class="status">
+    <strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>
+    This prototype records a movement session. It does not capture or assign real territory.
+  </div>
+</div>
+
 <h3>📍 Movement session</h3>
 <div class="panel">
   <div class="eyebrow">GPS ROUTE RECORDING</div>
-  <p>Press START to request location permission and record your route. Press STOP to finish and calculate an area estimate when enough points are available.</p>
+  <p>Tap START MISSION to request location permission. Tap the same button again to stop recording and calculate an estimate.</p>
   <div class="controls">
-    <button id="startBtn" onclick="startTracking()">START</button>
-    <button id="stopBtn" class="secondary" onclick="stopTracking()" disabled>STOP</button>
+    <button id="toggleBtn" onclick="toggleTracking()">START MISSION</button>
   </div>
   <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
-  <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings.</p>
+  <p class="note">Use only in safe, permitted places. Keep aware of traffic and your surroundings. Never enter private property to record a route.</p>
 </div>
 
 <h3>🗺️ Interactive territory map</h3>
@@ -77,6 +90,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
   <button class="zone z4" onclick="selectZone(3)">🌙<br>Moon Zone</button>
   <div class="maplabel">DEMO MAP · NOT A LIVE MAP</div>
 </div>
+
 <div class="details" aria-live="polite">
   <div class="eyebrow" id="zoneType">TERRITORY DETAILS</div>
   <h2 id="zoneName">Choose a territory</h2>
@@ -87,14 +101,14 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 <h3>⚔️ Challenge arena</h3>
 <div class="panel">
   <h2>Compete through movement</h2>
-  <p>Individual and team challenges are planned for a future version. No real players or shared territory ownership are connected yet.</p>
+  <p>Individual and team challenges are planned for a future version. Real players and shared territory ownership are not connected yet.</p>
   <button class="secondary" style="width:100%;margin-top:14px" onclick="showChallenges()">VIEW CHALLENGES</button>
-  <div id="challengeInfo" class="status" style="display:none"></div>
+  <div id="challengeInfo" class="status" style="display:none" aria-live="polite"></div>
 </div>
 
 <footer>
 PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>
-GPS recording requires your permission. Route data is kept only in this open page session.<br>
+GPS recording requires your permission. Route points stay in this page session.<br>
 No live multiplayer, server validation, or official territory capture yet.
 </footer>
 
@@ -105,6 +119,7 @@ let route = [];
 let totalDistance = 0;
 let startedAt = 0;
 let timerId = null;
+let lastAreaEstimate = null;
 
 const zones = [
  {name:"Emerald Zone",type:"YOUR SAMPLE TERRITORY",owner:"Owner: You (demo)",info:"Green sample territory. Real ownership is not connected."},
@@ -130,6 +145,20 @@ function say(message){
  document.getElementById("status").textContent=message;
 }
 
+function setButton(active){
+ const btn=document.getElementById("toggleBtn");
+ btn.textContent=active?"STOP MISSION":"START MISSION";
+ btn.classList.toggle("secondary",active);
+}
+
+function toggleTracking(){
+ if(recording){
+  stopTracking();
+ }else{
+  startTracking();
+ }
+}
+
 function distanceBetween(a,b){
  const R=6371000;
  const rad=x=>x*Math.PI/180;
@@ -143,11 +172,12 @@ function distanceBetween(a,b){
 function updateDistance(){
  const d=totalDistance;
  document.getElementById("distance").textContent=
- d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";
+  d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";
  document.getElementById("points").textContent=route.length;
 }
 
 function updateTimer(){
+ if(!startedAt)return;
  const seconds=Math.floor((Date.now()-startedAt)/1000);
  const mins=String(Math.floor(seconds/60)).padStart(2,"0");
  const secs=String(seconds%60).padStart(2,"0");
@@ -156,119 +186,159 @@ function updateTimer(){
 
 function startTracking(){
  if(recording)return;
+
  if(!navigator.geolocation){
   say("GPS is not available in this browser.");
   return;
  }
+
  if(!window.isSecureContext){
-  say("GPS requires a secure HTTPS website. Open your published GitHub Pages website.");
+  say("GPS requires HTTPS. Open your published GitHub Pages website.");
   return;
  }
 
  route=[];
  totalDistance=0;
+ lastAreaEstimate=null;
  startedAt=Date.now();
  recording=true;
- document.getElementById("startBtn").disabled=true;
- document.getElementById("stopBtn").disabled=false;
+
  document.getElementById("area").textContent="Recording…";
+ document.getElementById("missionStatus").textContent="IN PROGRESS";
+ setButton(true);
  updateDistance();
  updateTimer();
+
  timerId=setInterval(updateTimer,1000);
  say("Requesting GPS permission…");
 
- watchId=navigator.geolocation.watchPosition(position=>{
-  if(!recording)return;
-  const c=position.coords;
-  if(c.accuracy>100){
-   say("GPS accuracy is weak ("+Math.round(c.accuracy)+" m). Waiting for a better reading.");
-   return;
-  }
-  const point={
-   lat:c.latitude,
-   lon:c.longitude,
-   accuracy:c.accuracy,
-   time:position.timestamp
-  };
-  const last=route[route.length-1];
-  if(last){
-   const step=distanceBetween(last,point);
-   if(step<3)return;
-   if(step>500){
-    say("Large GPS jump ignored. Waiting for the next reliable point.");
+ try{
+  watchId=navigator.geolocation.watchPosition(position=>{
+   if(!recording)return;
+
+   const c=position.coords;
+
+   if(c.accuracy>100){
+    say("GPS accuracy is weak ("+Math.round(c.accuracy)+" m). Waiting for a better reading.");
     return;
    }
-   totalDistance+=step;
-  }
-  route.push(point);
-  updateDistance();
-  say("Recording route… "+route.length+" GPS points collected. Keep the phone secure and stay aware of your surroundings.");
- },error=>{
-  let message="GPS error.";
-  if(error.code===1)message="Location permission was denied. Allow location access in your browser settings to use GPS.";
-  if(error.code===2)message="Your current location could not be determined. Try again outdoors in a safe place.";
-  if(error.code===3)message="GPS request timed out. Try START again when location is available.";
-  say(message);
-  if(recording)stopTracking(true);
- },{
-  enableHighAccuracy:true,
-  maximumAge:2000,
-  timeout:20000
- });
+
+   const point={
+    lat:c.latitude,
+    lon:c.longitude,
+    accuracy:c.accuracy,
+    time:position.timestamp
+   };
+
+   const last=route[route.length-1];
+
+   if(last){
+    const step=distanceBetween(last,point);
+
+    if(step<3)return;
+
+    if(step>500){
+     say("Large GPS jump ignored. Waiting for the next reliable point.");
+     return;
+    }
+
+    totalDistance+=step;
+   }
+
+   route.push(point);
+   updateDistance();
+   say("Recording route… "+route.length+" GPS points collected.");
+  },error=>{
+   let message="GPS error.";
+   if(error.code===1)message="Location permission was denied. Allow location access in your browser settings to use GPS.";
+   if(error.code===2)message="Your location could not be determined. Try again later in a safe place.";
+   if(error.code===3)message="GPS request timed out. You can try START MISSION again.";
+
+   stopTracking(true,message);
+  },{
+   enableHighAccuracy:true,
+   maximumAge:2000,
+   timeout:20000
+  });
+ }catch(error){
+  stopTracking(true,"Could not start GPS. Please try again.");
+ }
 }
 
 function estimateArea(points){
  if(points.length<4)return null;
+
  const lat0=points.reduce((s,p)=>s+p.lat,0)/points.length;
  const lon0=points.reduce((s,p)=>s+p.lon,0)/points.length;
  const R=6371000;
  const rad=Math.PI/180;
+
  const xy=points.map(p=>({
   x:(p.lon-lon0)*rad*R*Math.cos(lat0*rad),
   y:(p.lat-lat0)*rad*R
  }));
+
  let sum=0;
+
  for(let i=0;i<xy.length;i++){
   const j=(i+1)%xy.length;
   sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;
  }
+
  return Math.abs(sum)/2;
 }
 
-function stopTracking(fromError=false){
+function stopTracking(fromError=false,errorMessage=""){
  if(!recording)return;
+
  recording=false;
+
  if(watchId!==null){
   navigator.geolocation.clearWatch(watchId);
   watchId=null;
  }
- clearInterval(timerId);
- document.getElementById("startBtn").disabled=false;
- document.getElementById("stopBtn").disabled=true;
+
+ if(timerId!==null){
+  clearInterval(timerId);
+  timerId=null;
+ }
+
+ setButton(false);
+ document.getElementById("missionStatus").textContent="FINISHED";
  updateTimer();
 
  if(route.length<4){
   document.getElementById("area").textContent="Unavailable";
-  say((fromError?"GPS stopped. ":"Session stopped. ")+
-   "Only "+route.length+" reliable GPS points were recorded. A useful area estimate needs at least 4 points; no territory was captured.");
+
+  say(errorMessage || (fromError?"GPS stopped. ":"Session stopped. ")+
+   "Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. No territory was captured.");
   return;
  }
 
  const estimated=estimateArea(route);
+
  if(estimated===null||!Number.isFinite(estimated)){
   document.getElementById("area").textContent="Unavailable";
-  say("Session stopped, but the area could not be calculated.");
+  say("Session stopped, but the area could not be estimated.");
   return;
  }
+
+ lastAreaEstimate=estimated;
 
  document.getElementById("area").textContent=
   estimated>=10000?(estimated/10000).toFixed(2)+" ha":Math.round(estimated)+" m²";
 
- say("Session stopped. Distance: "+
-  (totalDistance>=1000?(totalDistance/1000).toFixed(2)+" km":Math.round(totalDistance)+" m")+
-  ". Estimated enclosed area: "+
-  (estimated>=10000?(estimated/10000).toFixed(2)+" hectares":Math.round(estimated)+" m²")+
-  ". This is only a rough estimate from your recorded route, not an official territory claim. GPS noise or a crossing route can make the result inaccurate.");
+ const distanceText=totalDistance>=1000
+  ?(totalDistance/1000).toFixed(2)+" km"
+  :Math.round(totalDistance)+" m";
+
+ const areaText=estimated>=10000
+  ?(estimated/10000).toFixed(2)+" hectares"
+  :Math.round(estimated)+" m²";
+
+ say("Session stopped. Distance: "+distanceText+
+  ". Estimated enclosed area: "+areaText+
+  ". This is a rough GPS estimate, not an official territory claim. GPS noise, route shape, or crossing paths can make it inaccurate.");
 }
 </script>
 </body>
