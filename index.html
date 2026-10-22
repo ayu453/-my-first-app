@@ -6,54 +6,67 @@
 <meta name="theme-color" content="#0b1018">
 <title>Project Atlas</title>
 
+<link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Widgets/widgets.css">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Cesium.js"></script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#0b1018;color:#f4f7fb;padding:18px;max-width:850px;margin:auto}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
-.logo{font-size:21px;font-weight:900;letter-spacing:1px}
-.green{color:#54f5a5}
-.pill{border:1px solid #344154;border-radius:20px;padding:8px;font-size:11px;color:#aab8c9}
-.eyebrow{font-size:11px;letter-spacing:2px;color:#54f5a5;font-weight:bold}
-h1{font-size:36px;line-height:1.15;margin:14px 0}
-p{color:#aab8c9;font-size:14px;line-height:1.6}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
-.stat,.panel,.details{background:#131c29;border:1px solid #263448;border-radius:14px;padding:16px}
+:root{--bg:#0b1018;--panel:#131c29;--border:#263448;--green:#54f5a5;--muted:#aab8c9}
+body{font-family:Arial,sans-serif;background:var(--bg);color:#f4f7fb;width:100%;max-width:none;margin:0;padding:clamp(12px,2.5vw,30px)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:12px}
+.logo{font-size:clamp(18px,3vw,25px);font-weight:900;letter-spacing:1px}
+.green{color:var(--green)}
+.pill{border:1px solid #344154;border-radius:20px;padding:8px 12px;font-size:11px;color:var(--muted)}
+.eyebrow{font-size:11px;letter-spacing:2px;color:var(--green);font-weight:bold}
+h1{font-size:clamp(32px,5vw,54px);line-height:1.12;margin:14px 0}
+p{color:var(--muted);font-size:14px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
+.stat,.panel,.details{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;min-width:0}
 .stat small{color:#9ba9bb;font-size:11px}
-.stat h2{margin-top:9px;font-size:22px}
-h3{font-size:18px;margin:25px 0 13px}
-.map{height:275px;position:relative;overflow:hidden;border-radius:16px;background-color:#142b32;background-image:linear-gradient(30deg,transparent 47%,#36504c 48%,#36504c 50%,transparent 51%),linear-gradient(120deg,transparent 47%,#29444a 48%,#29444a 50%,transparent 51%);background-size:75px 65px,95px 85px;border:1px solid #30464a}
-.zone{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:bold;border:2px solid #54f5a5;background:#54f5a526;color:#caffdf;cursor:pointer;border-radius:35% 55% 40% 60%;padding:8px;min-height:70px}
-.z1{left:7%;top:10%;width:39%;height:35%}
-.z2{right:7%;top:13%;width:39%;height:34%;border-color:#f5c451;background:#f5c45120;color:#ffe4a0}
-.z3{left:10%;bottom:10%;width:37%;height:35%;border-color:#70b7ff;background:#70b7ff20;color:#b5dcff}
-.z4{right:8%;bottom:9%;width:38%;height:35%;border-color:#b69aff;background:#b69aff20;color:#e1d4ff}
-.maplabel{position:absolute;left:8px;bottom:7px;background:#0b1018e8;padding:7px;border-radius:6px;font-size:10px;pointer-events:none}
+.stat h2{margin-top:9px;font-size:clamp(18px,2.5vw,26px);overflow-wrap:anywhere}
+h3{font-size:18px;margin:28px 0 13px}
+.panel p{margin-top:9px}
+.status{margin-top:14px;background:#0d151f;border-radius:10px;padding:13px;font-size:13px;line-height:1.6;color:#d0dce7;overflow-wrap:anywhere}
+.controls{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
+button{border:0;border-radius:10px;padding:14px;background:var(--green);color:#07120c;font-size:14px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+.controls button{width:100%;min-height:49px}
+.secondary{background:#202c3b;color:white;border:1px solid #344154}
+.danger{background:#49252d;color:#ffd5dc;border:1px solid #70404a}
+.note{font-size:11px;margin-top:12px}
+.map-shell{width:100%;height:clamp(430px,68vh,850px);min-height:430px;position:relative;overflow:hidden;border:1px solid #30464a;border-radius:16px;background:#101923}
+#atlasMap{width:100%;height:100%;min-height:430px}
+.map-top{position:absolute;z-index:5;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+.map-chip{background:#0b1018e8;border:1px solid #344154;border-radius:9px;padding:10px 12px;font-size:11px;color:#eaf3fc;max-width:75%;line-height:1.5}
+.map-buttons{position:absolute;z-index:5;bottom:38px;left:12px;display:flex;gap:8px;flex-wrap:wrap}
+.map-buttons button{padding:11px 13px;font-size:12px;pointer-events:auto}
+.map-credit{position:absolute;z-index:5;bottom:5px;left:12px;background:#0b1018df;padding:4px 7px;border-radius:5px;font-size:10px;color:#d1dae6;pointer-events:none}
 .details{margin-top:13px}
 .details h2{margin:10px 0;font-size:21px}
 .details p{margin-top:7px}
-button{border:0;border-radius:10px;padding:14px;background:#54f5a5;color:#07120c;font-size:14px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.55;cursor:not-allowed}
-.secondary{background:#202c3b;color:white;border:1px solid #344154}
-.danger{background:#49252d;color:#ffd5dc;border:1px solid #70404a}
-.controls{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
-.controls button{width:100%;min-height:49px}
-.status{margin-top:14px;background:#0d151f;border-radius:10px;padding:13px;font-size:13px;line-height:1.6;color:#d0dce7;overflow-wrap:anywhere}
-.note{font-size:11px;margin-top:12px}
-.panel p{margin-top:9px}
-.history-item{background:#0d151f;border:1px solid #263448;border-radius:10px;padding:13px;margin-top:10px}
-.history-item h4{font-size:14px;margin-bottom:8px;color:#54f5a5}
+.history-item{background:#0d151f;border:1px solid var(--border);border-radius:10px;padding:13px;margin-top:10px}
+.history-item h4{font-size:14px;margin-bottom:8px;color:var(--green)}
 .history-item p{font-size:12px;margin-top:4px}
 .history-actions{margin-top:14px}
 .history-actions button{width:100%}
-.empty{font-size:13px;color:#aab8c9;padding:14px 0}
-footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-height:1.6}
+.empty{font-size:13px;color:var(--muted);padding:14px 0}
+footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-height:1.7}
+.cesium-viewer-bottom{font-size:10px}
+@media(max-width:700px){
+ body{padding:12px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat{padding:13px}
+ .map-shell,#atlasMap{min-height:430px}
+ .map-shell{height:62vh}
+ .map-buttons{bottom:36px}
+}
 </style>
 </head>
 
 <body>
 <header>
   <div class="logo">PROJECT <span class="green">ATLAS</span></div>
-  <div class="pill">PROTOTYPE</div>
+  <div class="pill">3D MAP PROTOTYPE</div>
 </header>
 
 <div class="eyebrow">MOVE IN THE REAL WORLD</div>
@@ -71,7 +84,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 <div class="panel">
   <div class="eyebrow">YOUR OBJECTIVE</div>
   <h2 style="margin-top:10px">Explore. Move. Map.</h2>
-  <p>Record a route in a safe, permitted area. Atlas estimates your distance and may estimate the enclosed area from your GPS route.</p>
+  <p>Record a route in a safe, permitted area. Atlas displays your GPS route on the map and estimates the area enclosed by it.</p>
   <div class="status">
     <strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>
     This prototype does not capture or assign real territory.
@@ -81,18 +94,43 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 <h3>📍 Movement session</h3>
 <div class="panel">
   <div class="eyebrow">GPS ROUTE RECORDING</div>
-  <p>Tap START MISSION to request location permission. Tap the same button again to stop recording.</p>
+  <p>Tap START MISSION to request location permission. Tap again to stop recording.</p>
   <div class="controls">
     <button id="toggleBtn" onclick="toggleTracking()">START MISSION</button>
   </div>
   <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
-  <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings.</p>
+  <p class="note">Use only in safe, permitted places. Stay aware of traffic and your surroundings. You do not need to travel anywhere just to test the map.</p>
+</div>
+
+<h3>🌍 Interactive 3D world map</h3>
+<div class="map-shell">
+  <div id="atlasMap" aria-label="Interactive 3D world map"></div>
+  <div class="map-top">
+    <div class="map-chip">
+      <strong>ATLAS WORLD</strong><br>
+      Rotate · Zoom · Explore
+    </div>
+    <div class="map-chip" id="mapStatus">Loading real-world map…</div>
+  </div>
+  <div class="map-buttons">
+    <button onclick="goToIndia()">VIEW INDIA</button>
+    <button class="secondary" onclick="goToMyLocation()">MY GPS</button>
+    <button class="secondary" onclick="resetMapView()">RESET VIEW</button>
+  </div>
+  <div class="map-credit">Map imagery © OpenStreetMap contributors · CesiumJS</div>
+</div>
+
+<div class="details" aria-live="polite">
+  <div class="eyebrow">LIVE MAP STATUS</div>
+  <h2 id="zoneName">Explore the Earth</h2>
+  <p id="zoneOwner">The globe can be rotated and zoomed with touch or mouse controls.</p>
+  <p id="zoneInfo">Your route will appear here when reliable GPS points are received. Detailed 3D buildings and terrain may require a Cesium ion token.</p>
 </div>
 
 <h3>📚 Mission history</h3>
 <div class="panel">
   <div class="eyebrow">YOUR COMPLETED SESSIONS</div>
-  <p>Completed sessions are saved in this browser. Only the date, distance, duration and estimated area are stored—not GPS coordinates.</p>
+  <p>Completed sessions are saved in this browser. Only date, distance, duration and estimated area are stored—not GPS coordinates.</p>
   <div id="historyList" aria-live="polite">
     <div class="empty">Loading mission history…</div>
   </div>
@@ -100,22 +138,6 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
     <button class="danger" onclick="clearHistory()">CLEAR HISTORY</button>
   </div>
   <p class="note">History is stored on this device and is not shared with other players. Clearing browser data may remove it.</p>
-</div>
-
-<h3>🗺️ Interactive territory map</h3>
-<div class="map">
-  <button class="zone z1" onclick="selectZone(0)">🌿<br>Emerald Zone</button>
-  <button class="zone z2" onclick="selectZone(1)">⚡<br>Storm Zone</button>
-  <button class="zone z3" onclick="selectZone(2)">💧<br>River Zone</button>
-  <button class="zone z4" onclick="selectZone(3)">🌙<br>Moon Zone</button>
-  <div class="maplabel">DEMO MAP · NOT A LIVE MAP</div>
-</div>
-
-<div class="details" aria-live="polite">
-  <div class="eyebrow" id="zoneType">TERRITORY DETAILS</div>
-  <h2 id="zoneName">Choose a territory</h2>
-  <p id="zoneOwner">Tap any coloured area on the map.</p>
-  <p id="zoneInfo">Sample territories are for interface testing only.</p>
 </div>
 
 <h3>⚔️ Challenge arena</h3>
@@ -128,39 +150,152 @@ footer{text-align:center;font-size:11px;color:#718096;margin:27px 0 10px;line-he
 
 <footer>
 PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>
-GPS recording requires permission. Mission history is stored locally in this browser.<br>
+GPS recording requires permission and a secure HTTPS website.<br>
 No live multiplayer, server validation, or official territory capture yet.
 </footer>
 
 <script>
+/*
+ OPTIONAL:
+ To enable Cesium ion terrain and 3D buildings later, put your own
+ Cesium ion access token between the quotation marks below.
+ Leave it empty for the basic 3D globe and OpenStreetMap imagery.
+ Do not publish a private/restricted token in a public repository.
+*/
+const CESIUM_ION_TOKEN = "";
+
+let viewer = null;
 let watchId = null;
 let recording = false;
 let route = [];
 let totalDistance = 0;
 let startedAt = 0;
 let timerId = null;
+let routeLine = null;
+let routePolygon = null;
+let currentMarker = null;
+let startMarker = null;
 let storageAvailable = true;
 
 const HISTORY_KEY = "projectAtlasMissionHistoryV1";
+const routeEntityIds = [];
 
-const zones = [
- {name:"Emerald Zone",type:"YOUR SAMPLE TERRITORY",owner:"Owner: You (demo)",info:"Green sample territory. Real ownership is not connected."},
- {name:"Storm Zone",type:"RIVAL SAMPLE TERRITORY",owner:"Owner: Player Alpha (demo)",info:"Sample rival territory for testing the interface."},
- {name:"River Zone",type:"UNCLAIMED SAMPLE TERRITORY",owner:"Owner: Unclaimed (demo)",info:"Sample unclaimed area. No real capture is possible yet."},
- {name:"Moon Zone",type:"RIVAL SAMPLE TERRITORY",owner:"Owner: Player Nova (demo)",info:"Sample territory for future challenges."}
-];
-
-function selectZone(i){
- document.getElementById("zoneType").textContent=zones[i].type;
- document.getElementById("zoneName").textContent=zones[i].name;
- document.getElementById("zoneOwner").textContent=zones[i].owner;
- document.getElementById("zoneInfo").textContent=zones[i].info;
+function setMapStatus(message){
+ const el=document.getElementById("mapStatus");
+ if(el)el.textContent=message;
 }
 
-function showChallenges(){
- const el=document.getElementById("challengeInfo");
- el.style.display="block";
- el.textContent="Challenge arena is in development. Real players and territory battles are not connected yet.";
+function initMap(){
+ if(!window.Cesium){
+  setMapStatus("Map library did not load. Check your internet connection and reload.");
+  document.getElementById("zoneName").textContent="Map unavailable";
+  document.getElementById("zoneOwner").textContent="The map library could not be loaded.";
+  return;
+ }
+
+ try{
+  if(CESIUM_ION_TOKEN.trim()){
+   Cesium.Ion.defaultAccessToken=CESIUM_ION_TOKEN.trim();
+  }
+
+  viewer=new Cesium.Viewer("atlasMap",{
+   imageryProvider:new Cesium.OpenStreetMapImageryProvider({
+    url:"https://tile.openstreetmap.org/"
+   }),
+   terrainProvider:new Cesium.EllipsoidTerrainProvider(),
+   animation:false,
+   timeline:false,
+   baseLayerPicker:false,
+   geocoder:false,
+   homeButton:false,
+   sceneModePicker:false,
+   navigationHelpButton:false,
+   fullscreenButton:false,
+   infoBox:false,
+   selectionIndicator:false,
+   requestRenderMode:false,
+   scene3DOnly:true
+  });
+
+  viewer.scene.globe.enableLighting=true;
+  viewer.scene.globe.depthTestAgainstTerrain=false;
+  viewer.scene.screenSpaceCameraController.enableCollisionDetection=true;
+
+  goToIndia();
+  setMapStatus("3D globe ready · OpenStreetMap");
+
+  if(CESIUM_ION_TOKEN.trim()){
+   enablePremium3D();
+  }
+ }catch(error){
+  console.error(error);
+  setMapStatus("Map could not start. Check your connection and reload.");
+ }
+}
+
+async function enablePremium3D(){
+ try{
+  setMapStatus("Loading 3D terrain…");
+  viewer.terrainProvider=await Cesium.createWorldTerrainAsync();
+  try{
+   const buildings=await Cesium.createOsmBuildingsAsync();
+   viewer.scene.primitives.add(buildings);
+   setMapStatus("3D terrain and available buildings enabled");
+  }catch(buildingError){
+   console.warn("3D buildings could not load:",buildingError);
+   setMapStatus("3D terrain enabled · Buildings unavailable");
+  }
+ }catch(error){
+  console.warn("Premium terrain could not load:",error);
+  setMapStatus("Basic 3D globe ready · Terrain unavailable");
+ }
+}
+
+function goToIndia(){
+ if(!viewer)return;
+ viewer.camera.flyTo({
+  destination:Cesium.Cartesian3.fromDegrees(80.0,22.0,6500000),
+  orientation:{
+   heading:0,
+   pitch:Cesium.Math.toRadians(-45),
+   roll:0
+  },
+  duration:1.5
+ });
+ document.getElementById("zoneName").textContent="Explore the Earth";
+ document.getElementById("zoneOwner").textContent="Showing a broad view of India.";
+ document.getElementById("zoneInfo").textContent="Zoom in to explore map imagery. This is not a territory ownership map.";
+}
+
+function goToMyLocation(){
+ if(!viewer)return;
+ const last=route[route.length-1];
+ if(!last){
+  say("Start a mission first to show a GPS position. Location is not requested by this map button alone.");
+  return;
+ }
+ viewer.camera.flyTo({
+  destination:Cesium.Cartesian3.fromDegrees(last.lon,last.lat,2500),
+  orientation:{
+   heading:0,
+   pitch:Cesium.Math.toRadians(-55),
+   roll:0
+  },
+  duration:1.2
+ });
+}
+
+function resetMapView(){
+ if(!viewer)return;
+ viewer.camera.flyTo({
+  destination:Cesium.Cartesian3.fromDegrees(0,10,18000000),
+  orientation:{
+   heading:0,
+   pitch:Cesium.Math.toRadians(-35),
+   roll:0
+  },
+  duration:1.5
+ });
 }
 
 function say(message){
@@ -174,11 +309,8 @@ function setButton(active){
 }
 
 function toggleTracking(){
- if(recording){
-  stopTracking();
- }else{
-  startTracking();
- }
+ if(recording)stopTracking();
+ else startTracking();
 }
 
 function distanceBetween(a,b){
@@ -192,18 +324,16 @@ function distanceBetween(a,b){
 }
 
 function updateDistance(){
- const d=totalDistance;
- document.getElementById("distance").textContent=
-  d>=1000?(d/1000).toFixed(2)+" km":Math.round(d)+" m";
+ document.getElementById("distance").textContent=formatDistance(totalDistance);
  document.getElementById("points").textContent=route.length;
 }
 
 function updateTimer(){
  if(!startedAt)return;
  const seconds=Math.floor((Date.now()-startedAt)/1000);
- const mins=String(Math.floor(seconds/60)).padStart(2,"0");
- const secs=String(seconds%60).padStart(2,"0");
- document.getElementById("duration").textContent=mins+":"+secs;
+ document.getElementById("duration").textContent=
+  String(Math.floor(seconds/60)).padStart(2,"0")+":"+
+  String(seconds%60).padStart(2,"0");
 }
 
 function startTracking(){
@@ -228,6 +358,11 @@ function startTracking(){
  document.getElementById("area").textContent="Recording…";
  document.getElementById("points").textContent="0";
  document.getElementById("missionStatus").textContent="IN PROGRESS";
+ document.getElementById("zoneName").textContent="Recording your route";
+ document.getElementById("zoneOwner").textContent="Waiting for reliable GPS points…";
+ document.getElementById("zoneInfo").textContent="The route will be drawn on the map. GPS points are not saved to mission history.";
+
+ clearRouteEntities();
 
  recording=true;
  setButton(true);
@@ -258,18 +393,32 @@ function startTracking(){
    if(last){
     const step=distanceBetween(last,point);
     if(step<3)return;
-
     if(step>500){
      say("Large GPS jump ignored. Waiting for the next reliable point.");
      return;
     }
-
     totalDistance+=step;
    }
 
    route.push(point);
    updateDistance();
-   say("Recording route… "+route.length+" GPS points collected.");
+   drawRoute();
+   setMapStatus("GPS route recording · "+route.length+" points");
+   say("Recording route… "+route.length+" reliable GPS points collected.");
+   document.getElementById("zoneOwner").textContent="GPS points recorded: "+route.length;
+   document.getElementById("zoneInfo").textContent="Displayed route is a GPS estimate, not an official territory claim.";
+
+   if(route.length===1){
+    viewer.camera.flyTo({
+     destination:Cesium.Cartesian3.fromDegrees(point.lon,point.lat,3500),
+     orientation:{
+      heading:0,
+      pitch:Cesium.Math.toRadians(-50),
+      roll:0
+     },
+     duration:1
+    });
+   }
   },error=>{
    let message="GPS error.";
    if(error.code===1)message="Location permission was denied. Check browser location settings.";
@@ -284,6 +433,91 @@ function startTracking(){
  }catch(error){
   stopTracking(true,"Could not start GPS. Please try again.");
  }
+}
+
+function clearRouteEntities(){
+ if(!viewer)return;
+ for(const id of routeEntityIds){
+  viewer.entities.removeById(id);
+ }
+ routeEntityIds.length=0;
+ routeLine=null;
+ routePolygon=null;
+ currentMarker=null;
+ startMarker=null;
+}
+
+function drawRoute(){
+ if(!viewer||route.length===0)return;
+
+ clearRouteEntities();
+
+ const positions=route.map(p=>Cesium.Cartesian3.fromDegrees(p.lon,p.lat,8));
+
+ if(positions.length>=2){
+  const line=viewer.entities.add({
+   name:"Project Atlas GPS route",
+   polyline:{
+    positions:positions,
+    width:5,
+    material:Cesium.Color.fromCssColorString("#54f5a5"),
+    clampToGround:false
+   }
+  });
+  routeEntityIds.push(line.id);
+  routeLine=line;
+ }
+
+ const first=route[0];
+ const last=route[route.length-1];
+
+ const start=viewer.entities.add({
+  name:"Mission start",
+  position:Cesium.Cartesian3.fromDegrees(first.lon,first.lat,12),
+  point:{
+   pixelSize:12,
+   color:Cesium.Color.fromCssColorString("#54f5a5"),
+   outlineColor:Cesium.Color.WHITE,
+   outlineWidth:2,
+   disableDepthTestDistance:Number.POSITIVE_INFINITY
+  },
+  label:{
+   text:"START",
+   font:"12px Arial",
+   fillColor:Cesium.Color.WHITE,
+   outlineColor:Cesium.Color.BLACK,
+   outlineWidth:3,
+   style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+   pixelOffset:new Cesium.Cartesian2(0,-22),
+   disableDepthTestDistance:Number.POSITIVE_INFINITY
+  }
+  });
+ routeEntityIds.push(start.id);
+ startMarker=start;
+
+ const current=viewer.entities.add({
+  name:"Current GPS position",
+  position:Cesium.Cartesian3.fromDegrees(last.lon,last.lat,12),
+  point:{
+   pixelSize:14,
+   color:Cesium.Color.fromCssColorString("#70b7ff"),
+   outlineColor:Cesium.Color.WHITE,
+   outlineWidth:2,
+   disableDepthTestDistance:Number.POSITIVE_INFINITY
+  },
+  label:{
+   text:"YOU",
+   font:"12px Arial",
+   fillColor:Cesium.Color.WHITE,
+   outlineColor:Cesium.Color.BLACK,
+   outlineWidth:3,
+   style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+   pixelOffset:new Cesium.Cartesian2(0,-23),
+   disableDepthTestDistance:Number.POSITIVE_INFINITY
+  }
+ });
+ routeEntityIds.push(current.id);
+ currentMarker=current;
 }
 
 function estimateArea(points){
@@ -304,8 +538,31 @@ function estimateArea(points){
   const j=(i+1)%xy.length;
   sum+=xy[i].x*xy[j].y-xy[j].x*xy[i].y;
  }
-
  return Math.abs(sum)/2;
+}
+
+function drawAreaPolygon(){
+ if(!viewer||route.length<4)return;
+
+ const coordinates=[];
+ for(const p of route){
+  coordinates.push(p.lon,p.lat,5);
+ }
+ const first=route[0];
+ coordinates.push(first.lon,first.lat,5);
+
+ const polygon=viewer.entities.add({
+  name:"Estimated mission area (not claimed)",
+  polygon:{
+   hierarchy:Cesium.Cartesian3.fromDegreesArrayHeights(coordinates),
+   material:Cesium.Color.fromCssColorString("#54f5a5").withAlpha(0.22),
+   outline:true,
+   outlineColor:Cesium.Color.fromCssColorString("#54f5a5"),
+   perPositionHeight:false
+  }
+ });
+ routeEntityIds.push(polygon.id);
+ routePolygon=polygon;
 }
 
 function formatDistance(d){
@@ -356,119 +613,4 @@ function renderHistory(){
   card.className="history-item";
 
   const title=document.createElement("h4");
-  title.textContent="MISSION "+(history.length-index);
-  card.appendChild(title);
-
-  const date=document.createElement("p");
-  date.textContent="Date: "+item.date;
-  card.appendChild(date);
-
-  const distance=document.createElement("p");
-  distance.textContent="Distance: "+formatDistance(item.distance);
-  card.appendChild(distance);
-
-  const duration=document.createElement("p");
-  duration.textContent="Duration: "+item.duration;
-  card.appendChild(duration);
-
-  const area=document.createElement("p");
-  area.textContent="Estimated area: "+formatArea(item.area);
-  card.appendChild(area);
-
-  container.appendChild(card);
- });
-}
-
-function clearHistory(){
- const history=getHistory();
-
- if(!history.length){
-  say("There is no mission history to clear.");
-  return;
- }
-
- if(!confirm("Clear all saved mission history from this browser? This cannot be undone.")){
-  return;
- }
-
- if(!saveHistory([])){
-  say("History could not be cleared. Browser storage may be unavailable.");
-  return;
- }
-
- renderHistory();
- say("Mission history cleared from this browser.");
-}
-
-function stopTracking(fromError=false,errorMessage=""){
- if(!recording)return;
-
- recording=false;
-
- if(watchId!==null){
-  navigator.geolocation.clearWatch(watchId);
-  watchId=null;
- }
-
- if(timerId!==null){
-  clearInterval(timerId);
-  timerId=null;
- }
-
- setButton(false);
- updateTimer();
-
- if(fromError){
-  document.getElementById("missionStatus").textContent="INTERRUPTED";
-  document.getElementById("area").textContent="Unavailable";
-  say(errorMessage+" This session was not saved to history.");
-  return;
- }
-
- document.getElementById("missionStatus").textContent="FINISHED";
-
- if(route.length<4){
-  document.getElementById("area").textContent="Unavailable";
-  say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");
-  return;
- }
-
- const estimated=estimateArea(route);
-
- if(estimated===null||!Number.isFinite(estimated)){
-  document.getElementById("area").textContent="Unavailable";
-  say("Session stopped, but the area could not be estimated. This session was not saved.");
-  return;
- }
-
- document.getElementById("area").textContent=formatArea(estimated);
-
- const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
- const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+
-  String(elapsedSeconds%60).padStart(2,"0");
-
- const record={
-  date:new Date().toLocaleString(),
-  distance:Math.round(totalDistance*100)/100,
-  duration:duration,
-  area:Math.round(estimated*100)/100
- };
-
- const history=getHistory();
- history.unshift(record);
- const saved=saveHistory(history.slice(0,50));
-
- if(saved){
-  renderHistory();
-  say("Session stopped. Distance: "+formatDistance(totalDistance)+
-   ". Estimated area: "+formatArea(estimated)+
-   ". Mission saved to history. This is only a rough GPS estimate, not an official territory claim.");
- }else{
-  say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
- }
-}
-
-renderHistory();
-</script>
-</body>
-</html>
+  title.textContent="MISSION "+(history.l
