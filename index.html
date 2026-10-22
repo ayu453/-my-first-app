@@ -278,47 +278,126 @@ function updateRouteOnMap(){
  map.getSource(routeSourceId).setData({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:coords.length?coords:[[0,0]]}});
  map.getSource(routePointSourceId).setData({type:"FeatureCollection",features:route.map((p,i)=>({type:"Feature",properties:{index:i},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))});
 }
+
 function startTracking(){
  if(recording)return;
- if(!navigator.geolocation){say("GPS is not available in this browser.");return;}
- if(!window.isSecureContext){say("GPS requires HTTPS. Open your published GitHub Pages website.");return;}
- route=[];totalDistance=0;startedAt=Date.now();
+
+ if(!navigator.geolocation){
+  say("GPS is not available in this browser.");
+  return;
+ }
+
+ if(!window.isSecureContext){
+  say("GPS requires HTTPS. Open the published GitHub Pages website.");
+  return;
+ }
+
+ route=[];
+ totalDistance=0;
+ startedAt=Date.now();
+
  document.getElementById("distance").textContent="0 m";
  document.getElementById("duration").textContent="00:00";
- document.getElementById("area").textContent="Recording…";
+ document.getElementById("area").textContent="Waiting for GPS…";
  document.getElementById("points").textContent="0";
  document.getElementById("missionStatus").textContent="IN PROGRESS";
- document.getElementById("zoneName").textContent="Recording your route";
- document.getElementById("zoneOwner").textContent="Waiting for reliable GPS points…";
- document.getElementById("zoneInfo").textContent="GPS route is an estimate, not an official territory claim.";
- recording=true;setButton(true);updateTimer();timerId=setInterval(updateTimer,1000);say("Requesting GPS permission…");
+
+ recording=true;
+ setButton(true);
+ updateTimer();
+ timerId=setInterval(updateTimer,1000);
+ say("Requesting fresh, high-accuracy GPS readings…");
+
  updateRouteOnMap();
+
  try{
   watchId=navigator.geolocation.watchPosition(position=>{
    if(!recording)return;
+
    const c=position.coords;
-   if(c.accuracy>100){say("GPS accuracy is weak ("+Math.round(c.accuracy)+" m). Waiting for a better reading.");return;}
-   const point={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,time:position.timestamp};
+   const accuracy=c.accuracy;
+
+   if(!Number.isFinite(accuracy)){
+    say("GPS accuracy unavailable. Waiting for another reading…");
+    return;
+   }
+
+   if(accuracy>50){
+    say("GPS accuracy is weak ("+
+        Math.round(accuracy)+" m). Keep waiting for a better reading.");
+    return;
+   }
+
+   const point={
+    lat:c.latitude,
+    lon:c.longitude,
+    accuracy:accuracy,
+    time:position.timestamp
+   };
+
    const last=route[route.length-1];
+
    if(last){
     const step=distanceBetween(last,point);
-    if(step<3)return;
-    if(step>500){say("Large GPS jump ignored. Waiting for the next reliable point.");return;}
-    totalDistance+=step;
+
+    if(step<3){
+     say("GPS accuracy: "+Math.round(accuracy)+
+         " m. Location stable; waiting for movement.");
+     return;
+    }
+
+    if(step>Math.max(100,accuracy+last.accuracy+30)){
+     say("GPS jump detected ("+Math.round(step)+
+         " m). Ignoring this point and waiting for a stable reading.");
+     return;
+    }
    }
-   route.push(point);updateDistance();updateRouteOnMap();
-   setMapStatus("GPS route recording · "+route.length+" points");
-   say("Recording route… "+route.length+" reliable GPS points collected.");
-   document.getElementById("zoneOwner").textContent="GPS points recorded: "+route.length;
-   if(route.length===1)map.flyTo({center:[point.lon,point.lat],zoom:17,pitch:is3D?58:0,duration:1000});
+
+   if(last){
+    totalDistance+=distanceBetween(last,point);
+   }
+
+   route.push(point);
+   updateDistance();
+   updateRouteOnMap();
+
+   setMapStatus("GPS recording · accuracy "+
+                Math.round(accuracy)+" m");
+
+   say("GPS point "+route.length+" recorded · accuracy "+
+       Math.round(accuracy)+" m.");
+
+   document.getElementById("zoneOwner").textContent=
+    "GPS accuracy: about "+Math.round(accuracy)+
+    " metres. Recorded points: "+route.length;
+
+   if(route.length===1 && map){
+    map.flyTo({
+     center:[point.lon,point.lat],
+     zoom:17,
+     pitch:is3D?58:0,
+     duration:1000
+    });
+   }
+
   },error=>{
-   let message="GPS error.";
-   if(error.code===1)message="Location permission was denied. Check browser location settings.";
-   if(error.code===2)message="Your location could not be determined. Try again later.";
-   if(error.code===3)message="GPS request timed out. You can try START MISSION again.";
+   let message="GPS error: "+error.message;
+
+   if(error.code===1)message="Location permission denied. Allow location in Chrome.";
+   if(error.code===2)message="Location unavailable. Check laptop location settings and Wi-Fi.";
+   if(error.code===3)message="GPS timed out. Wait a moment and try again.";
+
    stopTracking(true,message);
-  },{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
- }catch(error){stopTracking(true,"Could not start GPS. Please try again.");}
+
+  },{
+   enableHighAccuracy:true,
+   maximumAge:0,
+   timeout:30000
+  });
+
+ }catch(error){
+  stopTracking(true,"Could not start GPS: "+error.message);
+ }
 }
 function estimateArea(points){
  if(points.length<4)return null;
