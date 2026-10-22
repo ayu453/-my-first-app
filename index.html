@@ -199,10 +199,12 @@ function initMap(){
   }
 
   viewer=new Cesium.Viewer("atlasMap",{
-   imageryProvider:new Cesium.OpenStreetMapImageryProvider({
-    url:"https://tile.openstreetmap.org/"
-   }),
-   terrainProvider:new Cesium.EllipsoidTerrainProvider(),
+   baseLayer: new Cesium.ImageryLayer(
+ new Cesium.OpenStreetMapImageryProvider({
+  url: "https://tile.openstreetmap.org/"
+ })
+),
+terrainProvider: new Cesium.EllipsoidTerrainProvider(),
    animation:false,
    timeline:false,
    baseLayerPicker:false,
@@ -726,6 +728,17 @@ function stopTracking(fromError=false,errorMessage=""){
 }
 
 renderHistory();
+
+window.addEventListener("load", function () {
+ initMap();
+});
+
+function showChallenges() {
+ const box = document.getElementById("challengeInfo");
+ box.style.display = "block";
+ box.textContent =
+  "Challenges are planned for a future version. Multiplayer is not connected yet.";
+}
 </script>
 </body>
 </html>
