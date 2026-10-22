@@ -613,4 +613,119 @@ function renderHistory(){
   card.className="history-item";
 
   const title=document.createElement("h4");
-  title.textContent="MISSION "+(history.l
+  title.textContent="MISSION "+(history.length-index);
+  card.appendChild(title);
+
+  const date=document.createElement("p");
+  date.textContent="Date: "+item.date;
+  card.appendChild(date);
+
+  const distance=document.createElement("p");
+  distance.textContent="Distance: "+formatDistance(item.distance);
+  card.appendChild(distance);
+
+  const duration=document.createElement("p");
+  duration.textContent="Duration: "+item.duration;
+  card.appendChild(duration);
+
+  const area=document.createElement("p");
+  area.textContent="Estimated area: "+formatArea(item.area);
+  card.appendChild(area);
+
+  container.appendChild(card);
+ });
+}
+
+function clearHistory(){
+ const history=getHistory();
+
+ if(!history.length){
+  say("There is no mission history to clear.");
+  return;
+ }
+
+ if(!confirm("Clear all saved mission history from this browser? This cannot be undone.")){
+  return;
+ }
+
+ if(!saveHistory([])){
+  say("History could not be cleared. Browser storage may be unavailable.");
+  return;
+ }
+
+ renderHistory();
+ say("Mission history cleared from this browser.");
+}
+
+function stopTracking(fromError=false,errorMessage=""){
+ if(!recording)return;
+
+ recording=false;
+
+ if(watchId!==null){
+  navigator.geolocation.clearWatch(watchId);
+  watchId=null;
+ }
+
+ if(timerId!==null){
+  clearInterval(timerId);
+  timerId=null;
+ }
+
+ setButton(false);
+ updateTimer();
+
+ if(fromError){
+  document.getElementById("missionStatus").textContent="INTERRUPTED";
+  document.getElementById("area").textContent="Unavailable";
+  say(errorMessage+" This session was not saved to history.");
+  return;
+ }
+
+ document.getElementById("missionStatus").textContent="FINISHED";
+
+ if(route.length<4){
+  document.getElementById("area").textContent="Unavailable";
+  say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. This session was not saved.");
+  return;
+ }
+
+ const estimated=estimateArea(route);
+
+ if(estimated===null||!Number.isFinite(estimated)){
+  document.getElementById("area").textContent="Unavailable";
+  say("Session stopped, but the area could not be estimated. This session was not saved.");
+  return;
+ }
+
+ document.getElementById("area").textContent=formatArea(estimated);
+
+ const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
+ const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+
+  String(elapsedSeconds%60).padStart(2,"0");
+
+ const record={
+  date:new Date().toLocaleString(),
+  distance:Math.round(totalDistance*100)/100,
+  duration:duration,
+  area:Math.round(estimated*100)/100
+ };
+
+ const history=getHistory();
+ history.unshift(record);
+ const saved=saveHistory(history.slice(0,50));
+
+ if(saved){
+  renderHistory();
+  say("Session stopped. Distance: "+formatDistance(totalDistance)+
+   ". Estimated area: "+formatArea(estimated)+
+   ". Mission saved to history. This is only a rough GPS estimate, not an official territory claim.");
+ }else{
+  say("Session stopped. Stats were calculated, but browser storage is unavailable, so the mission could not be saved.");
+ }
+}
+
+renderHistory();
+</script>
+</body>
+</html>
