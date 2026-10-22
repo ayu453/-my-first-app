@@ -6,95 +6,93 @@
 <title>Project Atlas</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#0b1018;color:#f4f7fb;padding:20px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
-.logo{font-size:23px;font-weight:900;letter-spacing:2px}
-.logo span{color:#54f5a5}
-.pill{border:1px solid #344154;border-radius:20px;padding:8px 12px;color:#aab8c9;font-size:12px}
-.hero{padding:24px 0}
-.eyebrow{color:#54f5a5;font-size:12px;letter-spacing:3px;font-weight:bold}
-h1{font-size:38px;line-height:1.1;margin:14px 0}
-h1 span{color:#54f5a5}
-.sub{color:#9ba9bb;line-height:1.6;font-size:14px}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}
-.stat,.panel{background:#131c29;border:1px solid #263448;border-radius:16px;padding:18px}
-.stat small{color:#91a1b5;font-size:12px}
-.stat h2{font-size:25px;margin-top:10px}
+body{font-family:Arial,sans-serif;background:#0b1018;color:#f4f7fb;padding:18px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}
+.logo{font-size:22px;font-weight:900;letter-spacing:1px}
 .green{color:#54f5a5}
-.section-title{font-size:18px;margin:26px 0 14px}
-.map{height:245px;border-radius:16px;overflow:hidden;position:relative;background-color:#152b32;background-image:linear-gradient(30deg,transparent 46%,#36504c 47%,#36504c 49%,transparent 50%),linear-gradient(120deg,transparent 46%,#29444a 47%,#29444a 49%,transparent 50%),linear-gradient(90deg,transparent 48%,#3b5556 49%,#3b5556 51%,transparent 52%);background-size:85px 70px,110px 95px,75px 100%}
-.map:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#54f5a51c,transparent 65%)}
-.territory{position:absolute;z-index:1;left:22%;top:20%;width:55%;height:62%;border:2px solid #54f5a5;border-radius:42% 58% 35% 65% / 45% 35% 65% 55%;background:#54f5a525;transform:rotate(-12deg)}
-.pin{position:absolute;z-index:2;background:#54f5a5;color:#07120c;border-radius:20px;padding:8px 11px;font-size:11px;font-weight:bold;left:35%;top:45%}
-.map-label{position:absolute;z-index:2;bottom:12px;left:12px;background:#0b1018dc;padding:9px 11px;border-radius:8px;font-size:11px;color:#d4e4e5}
-.note{font-size:12px;color:#9ba9bb;margin-top:10px;line-height:1.5}
-button{width:100%;padding:15px;border:0;border-radius:12px;background:#54f5a5;color:#07120c;font-weight:bold;font-size:15px;margin-top:14px;cursor:pointer}
-.secondary{background:#202c3b;color:#f4f7fb;border:1px solid #344154}
-.panel p{font-size:13px;line-height:1.6;color:#aab8c9;margin-top:8px}
-.bottom{display:flex;justify-content:space-around;margin-top:28px;padding:18px 0;border-top:1px solid #263448;color:#91a1b5;font-size:12px}
-.bottom span:first-child{color:#54f5a5}
-#message{display:none;margin-top:14px;padding:14px;background:#1b302a;border-radius:10px;color:#54f5a5;font-size:13px;line-height:1.6}
-footer{text-align:center;color:#718096;font-size:11px;margin-top:18px;line-height:1.6}
+.pill{border:1px solid #344154;border-radius:20px;padding:8px;font-size:11px;color:#aab8c9}
+h1{font-size:36px;line-height:1.15;margin:14px 0}
+p{color:#aab8c9;font-size:14px;line-height:1.6}
+.eyebrow{font-size:11px;letter-spacing:2px;color:#54f5a5;font-weight:bold}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
+.stat,.panel{background:#131c29;border:1px solid #263448;border-radius:14px;padding:16px}
+.stat small{color:#9ba9bb;font-size:11px}
+.stat h2{margin-top:9px;font-size:23px}
+h3{font-size:18px;margin:24px 0 13px}
+.map{height:285px;position:relative;overflow:hidden;border-radius:16px;background-color:#142b32;background-image:linear-gradient(30deg,transparent 47%,#36504c 48%,#36504c 50%,transparent 51%),linear-gradient(120deg,transparent 47%,#29444a 48%,#29444a 50%,transparent 51%);background-size:75px 65px,95px 85px;border:1px solid #30464a}
+.zone{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:bold;border:2px solid #54f5a5;background:#54f5a526;color:#caffdf;cursor:pointer;transform:rotate(-8deg);border-radius:35% 55% 40% 60%;padding:8px}
+.zone:focus{outline:3px solid white}
+.zone:active{background:#54f5a566}
+.z1{left:8%;top:12%;width:38%;height:34%}
+.z2{right:8%;top:15%;width:38%;height:34%;border-color:#f5c451;background:#f5c45120;color:#ffe4a0}
+.z3{left:12%;bottom:12%;width:36%;height:35%;border-color:#70b7ff;background:#70b7ff20;color:#b5dcff}
+.z4{right:10%;bottom:10%;width:37%;height:35%;border-color:#b69aff;background:#b69aff20;color:#e1d4ff}
+.maplabel{position:absolute;z-index:2;left:8px;bottom:7px;background:#0b1018e8;padding:7px;border-radius:6px;font-size:10px}
+.details{margin-top:14px;background:#131c29;border:1px solid #344154;border-radius:14px;padding:17px}
+.details h2{margin:10px 0;font-size:21px}
+.details p{margin-top:7px}
+button{width:100%;border:0;border-radius:10px;padding:14px;background:#54f5a5;color:#07120c;font-size:14px;font-weight:bold;margin-top:14px;cursor:pointer}
+.secondary{background:#202c3b;color:white;border:1px solid #344154}
+.note{font-size:11px;margin-top:12px}
+footer{text-align:center;font-size:11px;color:#718096;margin:28px 0 10px}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo">PROJECT <span>ATLAS</span></div>
-  <div class="pill">● PROTOTYPE</div>
+<div class="logo">PROJECT <span class="green">ATLAS</span></div>
+<div class="pill">DEMO MODE</div>
 </header>
 
-<section class="hero">
-  <div class="eyebrow">MOVE IN THE REAL WORLD</div>
-  <h1>Your world.<br>Your <span>territory.</span></h1>
-  <p class="sub">Move your body. Explore your surroundings. Build your territory. The real world becomes your playing field.</p>
-</section>
+<div class="eyebrow">MOVE IN THE REAL WORLD</div>
+<h1>Your world.<br>Your <span class="green">territory.</span></h1>
+<p>Explore the map, tap a territory, and discover its details.</p>
 
 <div class="stats">
-  <div class="stat"><small>YOUR TERRITORY</small><h2>0.0 <span class="green">km²</span></h2></div>
-  <div class="stat"><small>ACTIVE STREAK</small><h2>0 <span class="green">days</span></h2></div>
-  <div class="stat"><small>DISTANCE MOVED</small><h2>0.0 <span class="green">km</span></h2></div>
-  <div class="stat"><small>RANK</small><h2>Rookie</h2></div>
+<div class="stat"><small>YOUR TERRITORY</small><h2>0.0 <span class="green">km²</span></h2></div>
+<div class="stat"><small>DISTANCE MOVED</small><h2>0.0 <span class="green">km</span></h2></div>
 </div>
 
-<h3 class="section-title">🗺️ Territory map</h3>
+<h3>🗺️ Interactive territory map</h3>
 <div class="map">
-  <div class="territory"></div>
-  <div class="pin">YOUR BASE</div>
-  <div class="map-label">DEMO MAP · NOT LIVE GPS</div>
+<button class="zone z1" onclick="selectZone(0)">🌿<br>Emerald Zone</button>
+<button class="zone z2" onclick="selectZone(1)">⚡<br>Storm Zone</button>
+<button class="zone z3" onclick="selectZone(2)">💧<br>River Zone</button>
+<button class="zone z4" onclick="selectZone(3)">🌙<br>Moon Zone</button>
+<div class="maplabel">SAMPLE MAP · NOT REAL GPS</div>
 </div>
-<p class="note">This is a sample map illustration. Real GPS tracking and live territory ownership are not connected yet.</p>
 
-<h3 class="section-title">Ready to explore?</h3>
+<div class="details" aria-live="polite">
+<div class="eyebrow" id="zoneType">TERRITORY DETAILS</div>
+<h2 id="zoneName">Choose a territory</h2>
+<p id="zoneOwner">Tap any coloured area on the map above.</p>
+<p id="zoneInfo">Its demo information will appear here.</p>
+</div>
+
+<h3>⚔️ Challenge arena</h3>
 <div class="panel">
-  <div class="eyebrow">YOUR NEXT MISSION</div>
-  <h2 style="margin-top:10px">Start a movement session</h2>
-  <p>In the future, your route can help form a territory. Stay in safe, public places and follow local rules.</p>
-  <button onclick="startMission()">START MISSION</button>
-  <div id="message"></div>
+<h2>Compete through movement</h2>
+<p style="margin-top:8px">Player challenges and live territory battles will be added in a future version.</p>
+<button class="secondary" onclick="showChallenge()">VIEW CHALLENGES</button>
+<p id="challengeInfo" style="margin-top:12px"></p>
 </div>
 
-<h3 class="section-title">⚔️ Territory challenges</h3>
-<div class="panel">
-  <h3>Compete through movement</h3>
-  <p>Challenge other players, defend your territory, and see who completes a physical mission first.</p>
-  <button class="secondary" onclick="showChallenges()">VIEW CHALLENGES</button>
-  <div id="challengeMessage"></div>
-</div>
-
-<div class="bottom">
-  <span>⌂ Home</span><span>◎ Explore</span><span>⚔ Challenges</span><span>♙ Profile</span>
-</div>
-<footer>PROJECT ATLAS · CONCEPT PROTOTYPE<br>GPS, accounts and multiplayer features are not active.</footer>
+<footer>PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>Demo territories only. No live GPS or real players connected.</footer>
 
 <script>
-function startMission(){
- const m=document.getElementById('message');
- m.style.display='block';
- m.textContent='Mission preview ready! Live GPS tracking is coming in a future version.';
+const zones=[
+{name:"Emerald Zone",owner:"Owner: You (demo)",info:"A green sample territory. In the future, movement routes could help players claim areas.",type:"YOUR SAMPLE TERRITORY"},
+{name:"Storm Zone",owner:"Owner: Player Alpha (demo)",info:"A sample rival territory. Real ownership and challenges are not connected yet.",type:"RIVAL SAMPLE TERRITORY"},
+{name:"River Zone",owner:"Owner: Unclaimed (demo)",info:"A sample unclaimed area. Future game rules could determine how players capture it.",type:"UNCLAIMED SAMPLE TERRITORY"},
+{name:"Moon Zone",owner:"Owner: Player Nova (demo)",info:"A sample territory for exploring future competition features.",type:"RIVAL SAMPLE TERRITORY"}
+];
+function selectZone(i){
+document.getElementById("zoneType").textContent=zones[i].type;
+document.getElementById("zoneName").textContent=zones[i].name;
+document.getElementById("zoneOwner").textContent=zones[i].owner;
+document.getElementById("zoneInfo").textContent=zones[i].info;
 }
-function showChallenges(){
- const m=document.getElementById('challengeMessage');
- m.innerHTML='<p>Challenge arena is in development. No real players or territories are connected yet.</p>';
+function showChallenge(){
+document.getElementById("challengeInfo").textContent="Challenge arena is in development. No real players or territories are connected yet.";
 }
 </script>
 </body>
