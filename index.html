@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1018">
-<title>Project Atlas V5</title>
+<title>Project Atlas V5.1 Debug Fix</title>
 <link href="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
@@ -167,7 +167,7 @@ const GPS_MAX_SPEED_MPS = 8.5;
 const GPS_MAX_AGE_MS = 15000;
 const GPS_MIN_STEP_METERS = 4;
 const MIN_TERRITORY_AREA_M2 = 10;
-const TEST_TOOLS_ENABLED = (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && new URLSearchParams(window.location.search).get("atlasTestTools") === "1";
+// This file is the GitHub Pages prototype, so prototype-only cleanup tools are enabled here. Remove them before any production release.
 let currentGpsMarker = null;
 const routeSourceId = "atlas-route";
 const routeLayerId = "atlas-route-line";
@@ -203,7 +203,7 @@ function initMap(){
   map.on("load",()=>{
    try{
     // Esri World Imagery provides real aerial imagery; usage is subject to Esri terms and may change.
-    map.addSource("atlas-satellite-imagery",{type:"raster",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],tileSize:256,attribution:"Imagery © Esri and its licensors"});
+    map.addSource("atlas-satellite-imagery",{type:"raster",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],tileSize:256,maxzoom:19,attribution:"Imagery © Esri and its licensors"});
     const firstLabel=(map.getStyle().layers||[]).find(layer=>layer.type==="symbol"&&layer.layout&&layer.layout["text-field"]);
     map.addLayer({id:"atlas-satellite-imagery-layer",type:"raster",source:"atlas-satellite-imagery",paint:{"raster-opacity":1}},firstLabel?firstLabel.id:undefined);
     map.addSource("openfreemap-buildings",{type:"vector",url:"https://tiles.openfreemap.org/planet"});
@@ -255,7 +255,7 @@ map.addLayer({
    }
    addRouteLayers();
   });
-  map.on("error",e=>{console.warn("Map error",e.error||e);});
+  map.on("error",e=>{console.warn("Map error",e.error||e); const sourceId=e&&e.sourceId; if(sourceId==="atlas-satellite-imagery"){setMapStatus("Satellite tiles unavailable at this location/zoom. Try zooming out one or two levels; other map layers may still work.");}});
  }catch(error){
   console.error(error);
   setMapStatus("Map could not start. Reload and check connection.");
@@ -542,7 +542,18 @@ function stopTracking(fromError=false,errorMessage=""){
    const linework=turf.multiLineString(segments);
    const polygonized=turf.polygonize(linework);
    faces=(polygonized.features||[]).filter(f=>f&&f.geometry&&f.geometry.type==="Polygon"&&turf.area(f)>=MIN_TERRITORY_AREA_M2&&turf.booleanValid(f));
-   if(!faces.length){say("Territory rejected: no valid enclosed loop was found. Try a route that encloses a clear area.");return;}
+   // Fallback for an ordinary non-self-crossing route: directly validate its automatically closed ring.
+   // This avoids rejecting a simple loop merely because polygonize returns no faces for that linework.
+   if(!faces.length){
+    const ring=coords.slice();
+    if(ring.length && (ring[0][0]!==ring[ring.length-1][0]||ring[0][1]!==ring[ring.length-1][1]))ring.push(ring[0]);
+    const distinct=new Set(ring.slice(0,-1).map(p=>p[0]+","+p[1]));
+    if(distinct.size>=3){
+     const direct=turf.polygon([ring]);
+     if(turf.area(direct)>=MIN_TERRITORY_AREA_M2&&turf.booleanValid(direct))faces=[direct];
+    }
+   }
+   if(!faces.length){say("Territory not created: the GPS route did not form a valid enclosed area. Record a loop with at least 3 distinct corners and avoid crossing over the same path. GPS mission history was saved.");return;}
   }catch(error){console.error("Route polygonization failed",error);say("Territory rejected: route intersections could not be polygonized safely. Mission stats remain saved.");return;}
   let remaining=null;
   try{
@@ -700,14 +711,14 @@ for(const territory of territories){
  if(!territory.playerColor){territory.playerColor=getPlayerColor(territory.playerId||DEFAULT_PLAYER_ID);colorsMigrated=true;}
 }
 if(colorsMigrated)saveTerritories();
-if(TEST_TOOLS_ENABLED){
+{
  const host=document.getElementById("territoryTestTools");
- const button=document.createElement("button");button.className="danger";button.textContent="Clear All Territories (TEST ONLY)";
+ const button=document.createElement("button");button.className="danger";button.textContent="Clear All Territories (PROTOTYPE ONLY)";
  host.appendChild(button);
  button.addEventListener("click",()=>{
-  if(!window.confirm("Delete all saved Project Atlas territory test data? Mission history and other settings will be kept."))return;
-  try{localStorage.removeItem(TERRITORY_KEY);territories=[];updateTerritoriesOnMap();say("All territory test data cleared. Mission history was kept.");}
-  catch(error){say("Could not clear territory data in this browser. Check storage permissions.");}
+  if(!window.confirm("Clear ALL saved Project Atlas territory test data on this device? This will NOT delete mission history, player identity, or GPS/map settings."))return;
+  try{localStorage.removeItem(TERRITORY_KEY);territories=[];updateTerritoriesOnMap();say("All territory test data cleared. Mission history and other settings were kept.");}
+  catch(error){console.error("Clear territory data failed",error);say("Could not clear territory data in this browser. Check browser storage permissions.");}
  });
 }
 
