@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1018">
-<title>Project Atlas</title>
+<title>Project Atlas V5</title>
 <link href="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
@@ -37,8 +38,15 @@ button:disabled{opacity:.55;cursor:not-allowed}
 #atlasMap{width:100%;height:100%;min-height:430px}
 .map-top{position:absolute;z-index:5;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
 .map-chip{background:#0b1018e8;border:1px solid #344154;border-radius:9px;padding:10px 12px;font-size:11px;color:#eaf3fc;max-width:75%;line-height:1.5}
-.map-buttons{position:absolute;z-index:5;bottom:38px;left:12px;display:flex;gap:8px;flex-wrap:wrap}
-.map-buttons button{padding:11px 13px;font-size:12px;pointer-events:auto}
+.map-buttons{position:absolute;z-index:5;bottom:max(24px,env(safe-area-inset-bottom));left:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.map-buttons button{padding:11px 13px;font-size:12px;pointer-events:auto;min-width:44px;min-height:44px}
+.icon-button{width:46px;min-width:46px!important;padding:10px!important;font-size:18px!important}
+.map-top{top:max(12px,env(safe-area-inset-top));left:12px;right:12px}
+.map-chip{max-width:calc(100% - 8px)}
+#mapStatus{display:none}
+#territoryTestTools{margin-top:12px}
+#territoryTestTools button{width:100%}
+@media(max-width:420px){.map-buttons{left:8px;right:8px;gap:6px}.icon-button{width:44px;min-width:44px!important}.map-shell{height:62vh;min-height:430px}.map-top{left:8px;right:8px}.map-chip{font-size:10px;padding:8px 9px}}
 .map-credit{position:absolute;z-index:5;bottom:5px;left:12px;background:#0b1018df;padding:4px 7px;border-radius:5px;font-size:10px;color:#d1dae6;pointer-events:none}
 .details{margin-top:13px}
 .details h2{margin:10px 0;font-size:21px}
@@ -57,7 +65,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
  .stat{padding:13px}
  .map-shell,#atlasMap{min-height:430px}
  .map-shell{height:62vh}
- .map-buttons{bottom:36px}
+ .map-buttons{bottom:max(24px,env(safe-area-inset-bottom))}
  .map-top{flex-wrap:wrap}
 }
 </style>
@@ -65,7 +73,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
 <body>
 <header>
   <div class="logo">PROJECT <span class="green">ATLAS</span></div>
-  <div class="pill">3D CITY MAP PROTOTYPE</div>
+  <div class="pill">SATELLITE MAP PROTOTYPE</div>
 </header>
 <div class="eyebrow">MOVE IN THE REAL WORLD</div>
 <h1>Your world.<br>Your <span class="green">territory.</span></h1>
@@ -93,7 +101,7 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <div class="eyebrow">YOUR OBJECTIVE</div>
   <h2 style="margin-top:10px">Explore. Move. Map.</h2>
   <p>Record a route in a safe, permitted area. Atlas displays your GPS route on the map and estimates the area enclosed by it.</p>
-  <div class="status"><strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>Close your route near its starting point to capture a coloured map area. Tap an area to view its missions.</div>
+  <div class="status"><strong>MISSION STATUS:</strong> <span id="missionStatus">READY</span><br>Atlas automatically connects the final route point to the starting point for territory testing. Tap a territory to view its mission summaries.</div>
 </div>
 
 <h3>📍 Movement session</h3>
@@ -109,23 +117,22 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
 <div class="map-shell">
   <div id="atlasMap" aria-label="Interactive 3D city map"></div>
   <div class="map-top">
-    <div class="map-chip"><strong>ATLAS CITY MAP</strong><br>Pinch to zoom · Drag to move · Two fingers to tilt</div>
-    <div class="map-chip" id="mapStatus">Loading map…</div>
+    <div class="map-chip"><strong>PROJECT ATLAS</strong><br>Pinch to zoom · Drag to move · Two fingers to tilt</div>
+    <div class="map-chip" id="mapStatus" aria-live="polite">Loading imagery…</div>
   </div>
   <div class="map-buttons">
-    <button onclick="goToIndia()">VIEW INDIA</button>
-    <button class="secondary" onclick="goToMyLocation()">MY GPS</button>
-    <button class="secondary" onclick="resetMapView()">RESET VIEW</button>
-    <button class="secondary" onclick="toggle3D()">3D / FLAT</button>
+    <button class="secondary icon-button" aria-label="Locate my current GPS position" title="Locate my current GPS position" onclick="goToMyLocation()">⌖</button>
+    <button class="secondary icon-button" aria-label="Locate my territories" title="Locate my territories" onclick="locateMyTerritory()">◎</button>
+    <button class="secondary" id="viewModeBtn" onclick="toggle3D()">3D / FLAT</button>
   </div>
-  <div class="map-credit">© OpenStreetMap contributors · OpenFreeMap · MapLibre</div>
+  <div class="map-credit">Imagery © Esri and its licensors · MapLibre</div>
 </div>
 
 <div class="details" aria-live="polite">
   <div class="eyebrow">LIVE MAP STATUS</div>
   <h2 id="zoneName">Explore the city</h2>
-  <p id="zoneOwner">Colourful street map with tilt, rotation and available 3D buildings.</p>
-  <p id="zoneInfo">Building and road detail depends on the map data available for each area. Territories use a stable colour per Player ID; boundaries are smoothed for display, while capture geometry is kept separate.</p>
+  <p id="zoneOwner">Satellite imagery with tilt, rotation and available 3D buildings.</p>
+  <p id="zoneInfo">Building and road detail depends on the map data available for each area. Territories use a stable colour per Player ID; thick rounded outlines preserve the actual ownership boundary.</p>
 </div>
 
 <h3>⚔️ Challenge arena</h3>
@@ -135,8 +142,9 @@ footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-he
   <button class="secondary" style="width:100%;margin-top:14px" onclick="showChallenges()">VIEW CHALLENGES</button>
   <div id="challengeInfo" class="status" style="display:none" aria-live="polite"></div>
 </div>
+<div id="territoryTestTools"></div>
 
-<footer>PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>GPS recording requires permission and a secure HTTPS website.<br>Territories and missions are stored on this device only; live multiplayer and server validation are not connected yet.</footer>
+<footer>PROJECT ATLAS · INTERACTIVE PROTOTYPE<br>GPS recording requires permission and a secure HTTPS website.<br>Esri World Imagery is subject to provider terms; check licensing before commercial use.<br>Territories and missions are stored on this device only; live multiplayer and server validation are not connected yet. Esri imagery is subject to provider terms and may have usage limits. Satellite imagery access and terms are controlled by Esri and may change.</footer>
 
 <script>
 let map = null;
@@ -154,6 +162,13 @@ const TERRITORY_KEY = "projectAtlasTerritoriesV1";
 const PLAYER_NAME_KEY = "projectAtlasPlayerNameV1";
 const PLAYER_ID_KEY = "projectAtlasPlayerIdV1";
 const DEFAULT_PLAYER_ID = "AT-1001";
+const GPS_MAX_ACCURACY_METERS = 35;
+const GPS_MAX_SPEED_MPS = 8.5;
+const GPS_MAX_AGE_MS = 15000;
+const GPS_MIN_STEP_METERS = 4;
+const MIN_TERRITORY_AREA_M2 = 10;
+const TEST_TOOLS_ENABLED = (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && new URLSearchParams(window.location.search).get("atlasTestTools") === "1";
+let currentGpsMarker = null;
 const routeSourceId = "atlas-route";
 const routeLayerId = "atlas-route-line";
 const routePointSourceId = "atlas-route-points";
@@ -183,10 +198,14 @@ function initMap(){
    dragRotate:true,
    pitchWithRotate:true
   });
-  map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true,visualizePitch:true}),"top-right");
+  map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:false,visualizePitch:true}),"top-right");
   map.addControl(new maplibregl.ScaleControl({maxWidth:100,unit:"metric"}),"bottom-right");
   map.on("load",()=>{
    try{
+    // Esri World Imagery provides real aerial imagery; usage is subject to Esri terms and may change.
+    map.addSource("atlas-satellite-imagery",{type:"raster",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],tileSize:256,attribution:"Imagery © Esri and its licensors"});
+    const firstLabel=(map.getStyle().layers||[]).find(layer=>layer.type==="symbol"&&layer.layout&&layer.layout["text-field"]);
+    map.addLayer({id:"atlas-satellite-imagery-layer",type:"raster",source:"atlas-satellite-imagery",paint:{"raster-opacity":1}},firstLabel?firstLabel.id:undefined);
     map.addSource("openfreemap-buildings",{type:"vector",url:"https://tiles.openfreemap.org/planet"});
     const layers=map.getStyle().layers||[];
     let labelLayerId;
@@ -229,10 +248,10 @@ map.addLayer({
   }
 }, labelLayerId);
     
-    setMapStatus("Colourful map ready · 3D buildings appear when data is available");
+    setMapStatus("Satellite imagery loaded where available · 3D buildings depend on local data");
    }catch(e){
     console.warn("3D building layer could not be added",e);
-    setMapStatus("Map ready · 3D building data unavailable here");
+    setMapStatus("Satellite imagery available; 3D building data unavailable here");
    }
    addRouteLayers();
   });
@@ -242,28 +261,37 @@ map.addLayer({
   setMapStatus("Map could not start. Reload and check connection.");
  }
 }
-function goToIndia(){
- if(!map)return;
- map.flyTo({center:[80.0,22.0],zoom:5.1,pitch:is3D?48:0,bearing:is3D?-10:0,duration:1400});
- document.getElementById("zoneName").textContent="Explore India";
- document.getElementById("zoneOwner").textContent="Showing a broad view of India.";
- document.getElementById("zoneInfo").textContent="Zoom into a town or city to see more street detail. 3D buildings appear at closer zoom levels where building data exists.";
-}
 function goToMyLocation(){
- if(!map)return;
- const last=route[route.length-1];
- if(!last){say("Start a mission first to record a GPS position. This button does not request location by itself.");return;}
- map.flyTo({center:[last.lon,last.lat],zoom:17,pitch:is3D?60:0,bearing:map.getBearing(),duration:1200});
+ if(!navigator.geolocation){say("This browser does not provide location access.");return;}
+ if(!window.isSecureContext){say("Current location requires the published HTTPS website.");return;}
+ say("Finding your current location… allow location permission if prompted.");
+ navigator.geolocation.getCurrentPosition(position=>{
+  const c=position.coords;
+  if(!Number.isFinite(c.latitude)||!Number.isFinite(c.longitude)){say("The device returned an invalid location. Try again outdoors or near a window.");return;}
+  const point=[c.longitude,c.latitude];
+  if(currentGpsMarker)currentGpsMarker.remove();
+  currentGpsMarker=new maplibregl.Marker({color:"#087cff"}).setLngLat(point).addTo(map);
+  map.flyTo({center:point,zoom:17,pitch:is3D?55:0,bearing:map.getBearing(),duration:1000});
+  say("Current location centred · reported accuracy about "+Math.round(c.accuracy)+" m.");
+ },error=>{say(error.code===1?"Location permission denied. Allow location in browser settings.":error.code===2?"Current location is unavailable. Check device location settings.":"Location request timed out. Try again.");},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
 }
-function resetMapView(){
- if(!map)return;
- map.flyTo({center:[84.8,23.7],zoom:5.2,pitch:is3D?52:0,bearing:is3D?-12:0,duration:1400});
+function locateMyTerritory(){
+ if(!map){say("Map is still loading.");return;}
+ const id=getPlayerId();
+ const mine=territories.filter(t=>t.playerId===id&&getTerritoryGeometry(t));
+ if(!mine.length){say("You do not have any saved territories for Player ID "+id+" yet.");return;}
+ const bounds=new maplibregl.LngLatBounds();
+ mine.forEach(t=>{const g=getTerritoryGeometry(t);const visit=coords=>{if(Array.isArray(coords)&&typeof coords[0]==="number"&&typeof coords[1]==="number")bounds.extend(coords);else if(Array.isArray(coords))coords.forEach(visit);};visit(g.coordinates);});
+ if(!bounds.isEmpty())map.fitBounds(bounds,{padding:{top:70,bottom:95,left:45,right:45},maxZoom:16,duration:1000});
+ say("Showing "+mine.length+" territory patch(es) owned by "+id+".");
 }
+
 function toggle3D(){
  if(!map)return;
  is3D=!is3D;
  map.easeTo({pitch:is3D?55:0,bearing:is3D?-12:0,duration:800});
- setMapStatus(is3D?"3D camera enabled · tilt with two fingers":"Flat view enabled");
+ const btn=document.getElementById("viewModeBtn");if(btn)btn.textContent=is3D?"3D / FLAT":"FLAT / 3D";
+ setMapStatus(is3D?"3D camera enabled":"Flat view enabled");
 }
 function say(message){document.getElementById("status").textContent=message;}
 function setButton(active){
@@ -297,7 +325,7 @@ function addRouteLayers(){
  map.addLayer({id:"atlas-route-points-layer",type:"circle",source:routePointSourceId,paint:{"circle-radius":7,"circle-color":"#178cff","circle-stroke-color":"#ffffff","circle-stroke-width":2}});
  map.addSource("atlas-territories",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
  map.addLayer({id:"atlas-territory-fill",type:"fill",source:"atlas-territories",paint:{"fill-color":["get","playerColor"],"fill-opacity":0.30}});
- map.addLayer({id:"atlas-territory-outline",type:"line",source:"atlas-territories",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":["get","playerColor"],"line-width":3}});
+ map.addLayer({id:"atlas-territory-outline",type:"line",source:"atlas-territories",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":["get","playerColor"],"line-width":4}});
  map.addSource("atlas-territory-labels",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
  map.addLayer({id:"atlas-territory-labels-layer",type:"symbol",source:"atlas-territory-labels",
   layout:{"text-field":["get","label"],"text-size":12,"text-anchor":"center","text-allow-overlap":true,"text-ignore-placement":true,"text-max-width":12},
@@ -308,8 +336,8 @@ function addRouteLayers(){
   let missions=[];
   try{missions=JSON.parse(props.missions||"[]");}catch(error){}
   const missionHtml=missions.length
-   ? missions.map((m,i)=>"<div style='margin-top:10px;padding-top:8px;border-top:1px solid #d4dbe3'><strong>Mission "+(missions.length-i)+"</strong><br>Date: "+escapeHtml(m.date||"—")+"<br>Distance: "+escapeHtml(formatDistance(Number(m.distance)||0))+"<br>Duration: "+escapeHtml(m.duration||"—")+"<br>Area: "+escapeHtml(formatArea(Number.isFinite(Number(m.area))?Number(m.area):null))+"</div>").join("")
-   : "<p>No missions linked to this territory yet.</p>";
+   ? missions.map((m,i)=>"<div style='margin-top:10px;padding-top:8px;border-top:1px solid #d4dbe3'><strong>"+escapeHtml(m.missionName||("Mission "+(missions.length-i)))+"</strong><br>Status: "+escapeHtml(m.status||"Completed")+"<br>Points: "+escapeHtml(m.points??"—")+"</div>").join("")
+   : "<p>No completed mission summaries are linked to this territory yet.</p>";
   new maplibregl.Popup({maxWidth:"300px"}).setLngLat(event.lngLat)
    .setHTML("<div style='color:#152033'><strong>"+escapeHtml(props.ownerName)+"</strong><br>Player ID: "+escapeHtml(props.playerId)+"<br>Area: "+escapeHtml(props.areaLabel)+"<h4 style='margin:12px 0 4px'>Territory missions</h4>"+missionHtml+"</div>")
    .addTo(map);
@@ -369,31 +397,32 @@ function startTracking(){
     return;
    }
 
-   if(accuracy>50){
+   if(accuracy>GPS_MAX_ACCURACY_METERS){
     say("GPS accuracy is weak ("+
         Math.round(accuracy)+" m). Keep waiting for a better reading.");
     return;
    }
 
-   const point={
-    lat:c.latitude,
-    lon:c.longitude,
-    accuracy:accuracy,
-    time:position.timestamp
-   };
+   const point={lat:c.latitude,lon:c.longitude,accuracy:accuracy,time:position.timestamp};
+   if(!Number.isFinite(point.lat)||!Number.isFinite(point.lon)||Math.abs(point.lat)>90||Math.abs(point.lon)>180){say("Invalid GPS coordinates ignored.");return;}
+   if(!Number.isFinite(point.time)||Math.abs(Date.now()-point.time)>GPS_MAX_AGE_MS){say("GPS timestamp is stale or invalid. Waiting for a fresh reading.");return;}
 
    const last=route[route.length-1];
 
    if(last){
     const step=distanceBetween(last,point);
+    const elapsed=(point.time-last.time)/1000;
+    if(!Number.isFinite(elapsed)||elapsed<=0){say("GPS timestamp did not advance. Reading ignored.");return;}
+    const speed=step/elapsed;
+    if(speed>GPS_MAX_SPEED_MPS&&step>Math.max(12,accuracy+last.accuracy)){say("Suspicious GPS jump ignored ("+Math.round(speed)+" m/s). Waiting for stable readings.");return;}
 
-    if(step < Math.max(3, (accuracy + last.accuracy) / 2)){
+    if(step < Math.max(GPS_MIN_STEP_METERS, (accuracy + last.accuracy) / 2)){
      say("GPS accuracy: "+Math.round(accuracy)+
          " m. Location stable; waiting for movement.");
      return;
     }
 
-    if(step>Math.max(100,accuracy+last.accuracy+30)){
+    if(step>Math.max(60,accuracy+last.accuracy+20)){
      say("GPS jump detected ("+Math.round(step)+
          " m). Ignoring this point and waiting for a stable reading.");
      return;
@@ -474,68 +503,83 @@ function stopTracking(fromError=false,errorMessage=""){
  document.getElementById("missionStatus").textContent="FINISHED";
  if(route.length<4){document.getElementById("area").textContent="Unavailable";say("Session stopped. Only "+route.length+" reliable GPS points were recorded. At least 4 points are needed for an area estimate. No territory was captured.");return;}
  const estimated=estimateArea(route);
- if(estimated===null||!Number.isFinite(estimated)||estimated<1){document.getElementById("area").textContent="Unavailable";say("Session stopped, but the area could not be estimated. No territory was captured.");return;}
- document.getElementById("area").textContent=formatArea(estimated);
+ // Shoelace area can cancel to zero on a self-crossing route; polygonization below is authoritative.
+ document.getElementById("area").textContent=estimated===null||!Number.isFinite(estimated)?"Calculating…":formatArea(estimated);
  const elapsedSeconds=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
  const duration=String(Math.floor(elapsedSeconds/60)).padStart(2,"0")+":"+String(elapsedSeconds%60).padStart(2,"0");
- const record={date:new Date().toLocaleString(),distance:Math.round(totalDistance*100)/100,duration:duration,area:Math.round(estimated*100)/100};
+ const record={date:new Date().toLocaleString(),distance:Math.round(totalDistance*100)/100,duration:duration,area:Number.isFinite(estimated)?Math.round(estimated*100)/100:0};
  const history=getHistory();history.unshift(record);
  const historySaved=saveHistory(history.slice(0,50));
 
  const first=route[0],last=route[route.length-1];
- const closeEnough=distanceBetween(first,last)<=Math.max(30,first.accuracy+last.accuracy);
- if(!closeEnough){
-  const nearbyTerritory=territories.find(t=>pointInTerritory([last.lon,last.lat],t));
-  if(nearbyTerritory){
-   nearbyTerritory.missions=Array.isArray(nearbyTerritory.missions)?nearbyTerritory.missions:[];
-   nearbyTerritory.missions.unshift(record);
-   nearbyTerritory.missions=nearbyTerritory.missions.slice(0,50);
-   saveTerritories();
-   updateTerritoriesOnMap();
-   say("Mission saved and linked to "+nearbyTerritory.ownerName+"'s territory. Tap its coloured area on the map to see the missions. Distance: "+formatDistance(totalDistance)+".");
-  }else{
-   say("Mission stats saved locally. This route did not close into a territory. Finish near your starting point to capture a new area, or finish inside an existing territory to link this mission to it. Distance: "+formatDistance(totalDistance)+".");
-  }
-  return;
- }
- if(!window.turf||!turf.difference||!turf.area){
+ // The route is closed automatically below; the player does not need to return to point A.
+ if(!window.turf||!turf.difference||!turf.area||!turf.polygonize||!turf.union||!turf.lineIntersect||!turf.booleanValid){
   say("Territory was not captured because the geometry library did not load. Check internet and try again; your GPS mission stats remain saved.");
   return;
  }
- const polygonPoints=route.map(p=>[p.lon,p.lat]);
- polygonPoints.push([first.lon,first.lat]);
- let remaining={type:"Feature",properties:{},geometry:{type:"Polygon",coordinates:[polygonPoints]}};
- try{
-  // Existing territories keep priority; remove their land from the new capture.
-  for(const existing of territories){
-   const existingGeometry=getTerritoryGeometry(existing);
-   if(!existingGeometry)continue;
-   remaining=turf.difference(turf.featureCollection([remaining,turf.feature(existingGeometry)]));
-   if(!remaining)break;
-  }
- }catch(error){
-  console.error("Territory clipping failed",error);
-  say("Territory was not captured because its boundary could not be safely clipped. Mission stats remain saved.");
-  return;
- }
- if(!remaining||!remaining.geometry||!["Polygon","MultiPolygon"].includes(remaining.geometry.type)){
-  say("No unclaimed land was found inside this route. Your mission stats were saved, but no new territory was created.");
-  return;
- }
- const remainingArea=turf.area(remaining);
- if(!Number.isFinite(remainingArea)||remainingArea<1){
-  say("The route contains no meaningful unclaimed area. Mission stats were saved; no territory was created.");
-  return;
- }
+  let faces=[];
+  try{
+   const coords=route.map(p=>[p.lon,p.lat]);
+   if(coords.length<4){say("Territory rejected: record at least 4 reliable GPS points.");return;}
+   // Polygonize individual route segments so bow-ties and multiple enclosed faces are handled.
+   const rawSegments=[];
+   for(let i=0;i<coords.length-1;i++)if(coords[i][0]!==coords[i+1][0]||coords[i][1]!==coords[i+1][1])rawSegments.push([coords[i],coords[i+1]]);
+   if(coords[coords.length-1][0]!==coords[0][0]||coords[coords.length-1][1]!==coords[0][1])rawSegments.push([coords[coords.length-1],coords[0]]);
+   if(rawSegments.length<3){say("Territory rejected: route has too few distinct segments.");return;}
+   // Node linework at crossings before polygonize; polygonize expects intersections to be explicit vertices.
+   const cuts=rawSegments.map(seg=>[seg[0],seg[1]]);
+   for(let i=0;i<rawSegments.length;i++)for(let j=i+1;j<rawSegments.length;j++){
+    if(j===i+1||(i===0&&j===rawSegments.length-1))continue;
+    const intersections=turf.lineIntersect(turf.lineString(rawSegments[i]),turf.lineString(rawSegments[j]));
+    for(const f of intersections.features){const pt=f.geometry.coordinates;cuts[i].push(pt);cuts[j].push(pt);}
+   }
+   const segments=[];
+   for(let i=0;i<cuts.length;i++){
+    const a=rawSegments[i][0];
+    const sorted=cuts[i].slice().sort((p,q)=>distanceBetween({lon:a[0],lat:a[1]},{lon:p[0],lat:p[1]})-distanceBetween({lon:a[0],lat:a[1]},{lon:q[0],lat:q[1]}));
+    for(let j=0;j<sorted.length-1;j++)if(distanceBetween({lon:sorted[j][0],lat:sorted[j][1]},{lon:sorted[j+1][0],lat:sorted[j+1][1]})>0.01)segments.push([sorted[j],sorted[j+1]]);
+   }
+   const linework=turf.multiLineString(segments);
+   const polygonized=turf.polygonize(linework);
+   faces=(polygonized.features||[]).filter(f=>f&&f.geometry&&f.geometry.type==="Polygon"&&turf.area(f)>=MIN_TERRITORY_AREA_M2&&turf.booleanValid(f));
+   if(!faces.length){say("Territory rejected: no valid enclosed loop was found. Try a route that encloses a clear area.");return;}
+  }catch(error){console.error("Route polygonization failed",error);say("Territory rejected: route intersections could not be polygonized safely. Mission stats remain saved.");return;}
+  let remaining=null;
+  try{
+   for(const face of faces){
+    let part=face;
+    for(const existing of territories){const existingGeometry=getTerritoryGeometry(existing);if(!existingGeometry)continue;part=turf.difference(turf.featureCollection([part,turf.feature(existingGeometry)]));if(!part)break;}
+    if(!part||!part.geometry||!["Polygon","MultiPolygon"].includes(part.geometry.type)||turf.area(part)<MIN_TERRITORY_AREA_M2)continue;
+    if(!remaining)remaining=part;
+    else remaining=turf.union(turf.featureCollection([remaining,part]));
+   }
+  }catch(error){console.error("Territory clipping failed",error);say("Territory was not captured because geometry overlap could not be safely resolved. Mission stats remain saved.");return;}
+  if(!remaining||!remaining.geometry||!["Polygon","MultiPolygon"].includes(remaining.geometry.type)){say("No unclaimed land was found inside this route. Your mission stats were saved, but no territory was created.");return;}
+  let remainingArea=turf.area(remaining);
+  if(!Number.isFinite(remainingArea)||remainingArea<MIN_TERRITORY_AREA_M2){say("Territory rejected: the unclaimed area is too small or invalid. Mission stats were saved.");return;}
+  // Replace the preliminary route estimate with the validated, unclaimed polygon area.
+  record.area=Math.round(remainingArea*100)/100;
+  const latestHistory=getHistory();if(latestHistory.length){latestHistory[0]=record;saveHistory(latestHistory.slice(0,50));}
+  document.getElementById("area").textContent=formatArea(remainingArea);
  const geometry=remaining.geometry;
- const firstRing=geometry.type==="Polygon"?geometry.coordinates[0]:geometry.coordinates[0][0];
- const territory={id:"territory-"+Date.now(),ownerName:getPlayerName(),playerId:getPlayerId(),playerColor:getPlayerColor(getPlayerId()),area:Math.round(remainingArea*100)/100,areaLabel:formatArea(remainingArea),capturedAt:new Date().toLocaleString(),coordinates:firstRing,geometry:geometry,missions:[record]};
+ const playerId=getPlayerId(),ownerName=getPlayerName(),playerColor=getPlayerColor(playerId);
+ const samePlayer=territories.filter(t=>t.playerId===playerId&&getTerritoryGeometry(t));
+ let merged=geometry,mergeSucceeded=true;
+ try{for(const own of samePlayer){merged=turf.union(turf.featureCollection([turf.feature(getTerritoryGeometry(own)),turf.feature(merged)]));if(!merged||!merged.geometry){mergeSucceeded=false;break;}}}catch(error){console.warn("Same-player merge failed; preserving existing patches separately",error);mergeSucceeded=false;}
+ if(!mergeSucceeded)merged=geometry;
+ const mergedArea=turf.area(merged);
+ const firstRing=merged.geometry.type==="Polygon"?merged.geometry.coordinates[0]:merged.geometry.coordinates[0][0];
+ const missionRecord={...record,missionName:"Mission "+new Date().toLocaleString(),status:"Completed",points:route.length};
+ const priorMissions=mergeSucceeded?samePlayer.flatMap(t=>Array.isArray(t.missions)?t.missions:[]):[];
+ const territory={id:"territory-"+Date.now(),ownerName:ownerName,playerId:playerId,playerColor:playerColor,area:Math.round(mergedArea*100)/100,areaLabel:formatArea(mergedArea),capturedAt:new Date().toLocaleString(),coordinates:firstRing,geometry:merged.geometry,missions:[missionRecord,...priorMissions].slice(0,50)};
+ const territoriesBefore=territories.slice();
+ if(mergeSucceeded)territories=territories.filter(t=>t.playerId!==playerId);
  territories.unshift(territory);
  if(saveTerritories()){
   updateTerritoriesOnMap();
   say("Territory captured! Overlapping parts were excluded. Owner: "+territory.ownerName+" ("+territory.playerId+"). Area of unclaimed land: "+territory.areaLabel+". "+(historySaved?"Mission stats saved.":"Mission stats could not be saved.")+" Stored on this device only.");
  }else{
-  territories.shift();
+  territories=territoriesBefore;
   say("Mission stopped, but territory could not be saved in this browser. Check browser storage settings.");
  }
 }
@@ -587,6 +631,14 @@ function getTerritoryGeometry(territory){
  }
  return null;
 }
+function isTerritoryValidForLoad(territory){
+ try{
+  if(!territory||typeof territory!=="object"||!territory.playerId)return false;
+  const geometry=getTerritoryGeometry(territory);
+  if(!geometry)return false;
+  return !window.turf||!turf.booleanValid||turf.booleanValid(turf.feature(geometry));
+ }catch(error){console.warn("Skipping corrupted saved territory",error);return false;}
+}
 function pointInPolygon(point,ring){
  let inside=false;
  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
@@ -616,31 +668,12 @@ function getPlayerColor(playerId){
  const rgb=hue<60?[c,x,0]:hue<120?[x,c,0]:hue<180?[0,c,x]:hue<240?[0,x,c]:hue<300?[x,0,c]:[c,0,x];
  return "#"+rgb.map(v=>Math.round((v+m)*255).toString(16).padStart(2,"0")).join("");
 }
-// Smooth only the displayed boundary. The stored geometry used for ownership and area stays unchanged.
-function smoothRingForDisplay(ring){
- if(!Array.isArray(ring)||ring.length<5)return ring;
- const open=ring.slice(0,-1);
- if(open.length<4)return ring;
- const smooth=[];
- for(let i=0;i<open.length;i++){
-  const a=open[i],b=open[(i+1)%open.length];
-  smooth.push([0.75*a[0]+0.25*b[0],0.75*a[1]+0.25*b[1]]);
-  smooth.push([0.25*a[0]+0.75*b[0],0.25*a[1]+0.75*b[1]]);
- }
- smooth.push(smooth[0].slice());
- return smooth;
-}
-function smoothGeometryForDisplay(geometry){
- const smoothPolygon=poly=>poly.map(ring=>smoothRingForDisplay(ring));
- if(geometry.type==="Polygon")return {type:"Polygon",coordinates:smoothPolygon(geometry.coordinates)};
- return {type:"MultiPolygon",coordinates:geometry.coordinates.map(smoothPolygon)};
-}
 function updateTerritoriesOnMap(){
  if(!map||!map.isStyleLoaded()||!map.getSource("atlas-territories"))return;
  const valid=territories.filter(t=>getTerritoryGeometry(t));
  const features=valid.map(t=>{
   const geometry=getTerritoryGeometry(t);
-  return {type:"Feature",properties:{id:t.id,ownerName:t.ownerName,playerId:t.playerId,playerColor:t.playerColor||getPlayerColor(t.playerId),areaLabel:t.areaLabel||formatArea(t.area),missions:JSON.stringify(Array.isArray(t.missions)?t.missions:[])},geometry:smoothGeometryForDisplay(geometry)};
+  return {type:"Feature",properties:{id:t.id,ownerName:t.ownerName,playerId:t.playerId,playerColor:t.playerColor||getPlayerColor(t.playerId),areaLabel:t.areaLabel||formatArea(t.area),missions:JSON.stringify(Array.isArray(t.missions)?t.missions:[])},geometry:geometry};
  });
  map.getSource("atlas-territories").setData({type:"FeatureCollection",features});
  const labels=valid.map(t=>{
@@ -651,7 +684,8 @@ function updateTerritoriesOnMap(){
    const geometry=getTerritoryGeometry(t),ring=geometry.type==="Polygon"?geometry.coordinates[0]:geometry.coordinates[0][0],open=ring.slice(0,-1);
    center=open.reduce((sum,point)=>[sum[0]+point[0]/open.length,sum[1]+point[1]/open.length],[0,0]);
   }
-  return {type:"Feature",properties:{label:t.ownerName+"\n"+t.playerId+"\n"+(t.areaLabel||formatArea(t.area))},geometry:{type:"Point",coordinates:center}};
+  const ownedArea=valid.filter(other=>other.playerId===t.playerId).reduce((sum,other)=>sum+(window.turf&&turf.area?turf.area(turf.feature(getTerritoryGeometry(other))):(Number(other.area)||0)),0);
+  return {type:"Feature",properties:{label:t.ownerName+"\n"+t.playerId+"\nTotal: "+formatArea(ownedArea)},geometry:{type:"Point",coordinates:center}};
  });
  if(map.getSource("atlas-territory-labels"))map.getSource("atlas-territory-labels").setData({type:"FeatureCollection",features:labels});
 }
@@ -660,15 +694,24 @@ function showChallenges(){
  box.textContent="Challenges are planned for a future version. Multiplayer is not connected yet.";
 }
 loadPlayerIdentity();
-territories=getTerritories();
+territories=getTerritories().filter(isTerritoryValidForLoad);
 let colorsMigrated=false;
 for(const territory of territories){
  if(!territory.playerColor){territory.playerColor=getPlayerColor(territory.playerId||DEFAULT_PLAYER_ID);colorsMigrated=true;}
 }
 if(colorsMigrated)saveTerritories();
+if(TEST_TOOLS_ENABLED){
+ const host=document.getElementById("territoryTestTools");
+ const button=document.createElement("button");button.className="danger";button.textContent="Clear All Territories (TEST ONLY)";
+ host.appendChild(button);
+ button.addEventListener("click",()=>{
+  if(!window.confirm("Delete all saved Project Atlas territory test data? Mission history and other settings will be kept."))return;
+  try{localStorage.removeItem(TERRITORY_KEY);territories=[];updateTerritoriesOnMap();say("All territory test data cleared. Mission history was kept.");}
+  catch(error){say("Could not clear territory data in this browser. Check storage permissions.");}
+ });
+}
 
 window.addEventListener("load",initMap);
 </script>
 </body>
 </html>
-
