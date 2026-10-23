@@ -1,0 +1,771 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1018">
+<title>Project Atlas — Territory Prototype</title>
+
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
+
+<style>
+:root{
+ --bg:#0b1018;--panel:#131c29;--border:#263448;
+ --green:#54f5a5;--muted:#aab8c9;--red:#ff6677;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;padding:14px;background:var(--bg);color:#f4f7fb;
+ font-family:Arial,Helvetica,sans-serif
+}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{font-size:22px;font-weight:900;letter-spacing:1px}
+.green{color:var(--green)}
+.pill{font-size:10px;border:1px solid var(--border);padding:7px 10px;border-radius:20px;color:var(--muted)}
+.eyebrow{font-size:11px;letter-spacing:1.5px;color:var(--green);font-weight:bold}
+h1{font-size:clamp(30px,6vw,46px);line-height:1.1;margin:14px 0}
+h2{font-size:20px}
+h3{font-size:16px;margin:22px 0 10px}
+p{font-size:13px;line-height:1.55;color:var(--muted)}
+.panel,.stat,.details{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:18px 0}
+.stat small{font-size:10px;color:var(--muted)}
+.stat h2{font-size:clamp(15px,3vw,22px);overflow-wrap:anywhere;margin:8px 0 0}
+button,input{font:inherit}
+button{
+ border:0;border-radius:9px;padding:12px;background:var(--green);
+ color:#07120c;font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.55}
+.secondary{background:#202c3b;color:white;border:1px solid #344154}
+.danger{background:#49232b;color:#ffdce1;border:1px solid #75404a}
+input{
+ width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);
+ background:#0d151f;color:white;margin-top:7px
+}
+.status{background:#0d151f;border:1px solid var(--border);padding:12px;border-radius:9px;margin-top:12px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.map-shell{
+ position:relative;height:65vh;min-height:420px;max-height:800px;
+ margin-top:10px;border:1px solid var(--border);border-radius:14px;
+ overflow:hidden;background:#17212b
+}
+#atlasMap{position:absolute;inset:0}
+.map-status{
+ position:absolute;z-index:3;top:10px;left:10px;
+ max-width:calc(100% - 20px);background:#0b1018e8;
+ border:1px solid var(--border);padding:8px 10px;border-radius:8px;
+ font-size:11px;pointer-events:none
+}
+.map-tools{
+ position:absolute;z-index:4;top:12px;right:10px;
+ display:flex;flex-direction:column;gap:8px
+}
+.map-tools button{
+ width:44px;height:44px;padding:0;font-size:18px;
+ background:#131c29ed;color:white;border:1px solid #42516a
+}
+.map-mode{position:absolute;z-index:4;right:10px;bottom:30px}
+.map-mode button{background:#131c29ed;color:white;border:1px solid #42516a}
+.map-credit{
+ position:absolute;z-index:3;bottom:4px;left:7px;
+ font-size:9px;color:white;background:#0b1018c9;padding:3px 5px;
+ pointer-events:none
+}
+.details{margin-top:12px}
+.history-item{background:#0d151f;border:1px solid var(--border);border-radius:9px;padding:12px;margin-top:8px}
+.history-item p{margin:5px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.row button{flex:1}
+footer{text-align:center;font-size:10px;color:#8190a3;margin:22px 0}
+@media(max-width:600px){
+ body{padding:10px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .map-shell{height:62vh;min-height:400px}
+}
+</style>
+</head>
+
+<body>
+<header>
+ <div class="logo">PROJECT <span class="green">ATLAS</span></div>
+ <div class="pill">GPS TERRITORY PROTOTYPE</div>
+</header>
+
+<div class="eyebrow" style="margin-top:22px">MOVE IN THE REAL WORLD</div>
+<h1>Your world.<br>Your <span class="green">territory.</span></h1>
+<p>Record a real route and attempt to capture the area enclosed by it.</p>
+
+<div class="stats">
+ <div class="stat"><small>SESSION DISTANCE</small><h2 id="distance">0 m</h2></div>
+ <div class="stat"><small>SESSION TIME</small><h2 id="duration">00:00</h2></div>
+ <div class="stat"><small>ESTIMATED AREA</small><h2 id="area">—</h2></div>
+ <div class="stat"><small>GPS POINTS</small><h2 id="points">0</h2></div>
+</div>
+
+<h3>Player identity</h3>
+<div class="panel">
+ <label for="playerName">Player name</label>
+ <input id="playerName" maxlength="40" placeholder="Enter player name">
+ <p>Player ID: <strong class="green" id="playerId">AT-1001</strong></p>
+ <p>Identity is stored locally in this browser; it is not an online account.</p>
+</div>
+
+<h3>Movement mission</h3>
+<div class="panel">
+ <p>Start recording, move safely, then stop. Atlas attempts to close the route automatically; you do not need to return to the starting point.</p>
+ <button id="toggleBtn" style="width:100%" onclick="toggleTracking()">START MISSION</button>
+ <div id="status" class="status" aria-live="polite">Ready. GPS has not started.</div>
+ <p id="missionStatus">MISSION STATUS: READY</p>
+</div>
+
+<h3>Satellite territory map</h3>
+<div class="map-shell">
+ <div id="atlasMap"></div>
+ <div id="mapStatus" class="map-status">Loading map…</div>
+
+ <div class="map-tools">
+  <button onclick="goToMyLocation()" aria-label="My GPS" title="My GPS">⌖</button>
+  <button onclick="locateMyTerritory()" aria-label="Locate my territory" title="Locate my territory">◎</button>
+ </div>
+ <div class="map-mode">
+  <button id="viewModeBtn" onclick="toggle3D()">▱ 3D</button>
+ </div>
+ <div class="map-credit">Imagery © Esri · MapLibre</div>
+</div>
+
+<div class="details">
+ <div class="eyebrow">TERRITORY DETAILS</div>
+ <h2 id="zoneName">Explore the map</h2>
+ <p id="zoneInfo">Territory overlays and labels appear after a successful capture.</p>
+</div>
+
+<h3>Mission history</h3>
+<div class="panel">
+ <div id="historyList"><p>No missions recorded yet.</p></div>
+ <button class="secondary" style="width:100%;margin-top:10px" onclick="clearHistory()">Clear Mission History</button>
+</div>
+
+<h3>Challenge arena</h3>
+<div class="panel">
+ <p>Individual and team challenges are planned. Multiplayer and server-side validation are not connected in this prototype.</p>
+ <button class="secondary" style="width:100%" onclick="showChallenges()">VIEW CHALLENGES</button>
+ <div id="challengeInfo" class="status" hidden></div>
+</div>
+
+<h3>Prototype tools</h3>
+<div class="panel">
+ <p>Delete captured territory test data only. Mission history and player identity are kept.</p>
+ <button class="danger" style="width:100%" onclick="clearTerritories()">CLEAR ALL TERRITORIES</button>
+</div>
+
+<footer>
+ PROJECT ATLAS · LOCAL BROWSER PROTOTYPE<br>
+ GPS requires permission and a secure HTTPS website.<br>
+ Imagery availability, detail and licensing depend on the provider.
+</footer>
+
+<script>
+"use strict";
+
+/* -------------------- STATE & STORAGE -------------------- */
+const HISTORY_KEY="projectAtlasMissionHistoryV1";
+const TERRITORY_KEY="projectAtlasTerritoriesV1";
+const PLAYER_NAME_KEY="projectAtlasPlayerNameV1";
+const PLAYER_ID_KEY="projectAtlasPlayerIdV1";
+
+const DEFAULT_PLAYER_ID="AT-1001";
+const MIN_TERRITORY_AREA_M2=10;
+const GPS_MAX_ACCURACY_METERS=35;
+const GPS_MAX_SPEED_MPS=8.5;
+const GPS_MAX_AGE_MS=15000;
+const GPS_MIN_STEP_METERS=4;
+
+let map=null;
+let watchId=null;
+let recording=false;
+let route=[];
+let totalDistance=0;
+let startedAt=0;
+let timerId=null;
+let is3D=false;
+let territories=[];
+let currentGpsMarker=null;
+let lastAcceptedAt=0;
+
+const $=id=>document.getElementById(id);
+
+function say(message){$("status").textContent=message;}
+function mapMessage(message){$("mapStatus").textContent=message;}
+function safeGet(key,fallback){
+ try{
+  const value=localStorage.getItem(key);
+  return value===null?fallback:value;
+ }catch(error){return fallback;}
+}
+function safeSet(key,value){
+ try{localStorage.setItem(key,value);return true;}
+ catch(error){return false;}
+}
+function readArray(key){
+ try{
+  const value=JSON.parse(localStorage.getItem(key)||"[]");
+  return Array.isArray(value)?value:[];
+ }catch(error){return [];}
+}
+function saveHistory(history){
+ return safeSet(HISTORY_KEY,JSON.stringify(history.slice(0,100)));
+}
+function saveTerritories(){
+ return safeSet(TERRITORY_KEY,JSON.stringify(territories));
+}
+function playerName(){
+ return ($("playerName").value.trim()||"Atlas Player").slice(0,40);
+}
+function playerId(){
+ return safeGet(PLAYER_ID_KEY,DEFAULT_PLAYER_ID);
+}
+function playerColor(id){
+ let hash=0;
+ for(const char of String(id))hash=(hash*31+char.charCodeAt(0))|0;
+ return "hsl("+(Math.abs(hash)%360)+" 75% 48%)";
+}
+function escapeHtml(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
+}
+function formatDistance(m){
+ return m>=1000?(m/1000).toFixed(2)+" km":Math.round(m)+" m";
+}
+function formatArea(m2){
+ if(!Number.isFinite(m2))return "Unavailable";
+ return m2>=10000?(m2/10000).toFixed(2)+" ha":Math.round(m2)+" m²";
+}
+function distanceBetween(a,b){
+ const R=6371000,rad=x=>x*Math.PI/180;
+ const dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon);
+ const v=Math.sin(dLat/2)**2+
+  Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+ return 2*R*Math.atan2(Math.sqrt(v),Math.sqrt(Math.max(0,1-v)));
+}
+
+/* -------------------- MAP -------------------- */
+function initMap(){
+ if(!window.maplibregl){
+  mapMessage("Map library unavailable. Check internet and reload.");
+  return;
+ }
+ try{
+  map=new maplibregl.Map({
+   container:"atlasMap",
+   style:"https://tiles.openfreemap.org/styles/bright",
+   center:[84.8,23.7],
+   zoom:5.2,
+   pitch:0,
+   bearing:0,
+   maxPitch:65,
+   attributionControl:true
+  });
+
+  // No compass/navigation widget: custom controls are used instead.
+  map.on("load",()=>{
+   try{
+    map.addSource("atlas-satellite",{
+     type:"raster",
+     tiles:[
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+     ],
+     tileSize:256,
+     maxzoom:19,
+     attribution:"Imagery © Esri and its licensors"
+    });
+    map.addLayer({
+     id:"atlas-satellite-layer",
+     type:"raster",
+     source:"atlas-satellite",
+     paint:{"raster-opacity":1}
+    },firstTextLabel());
+
+    // 3D buildings are enabled only in 3D view and where vector data exists.
+    map.addSource("atlas-buildings",{
+     type:"vector",
+     url:"https://tiles.openfreemap.org/planet"
+    });
+    map.addLayer({
+     id:"atlas-3d-buildings",
+     source:"atlas-buildings",
+     "source-layer":"building",
+     type:"fill-extrusion",
+     minzoom:14,
+     layout:{"visibility":"none"},
+     paint:{
+      "fill-extrusion-color":"#aab7c6",
+      "fill-extrusion-height":["coalesce",["get","render_height"],["get","height"],8],
+      "fill-extrusion-base":["coalesce",["get","render_min_height"],["get","min_height"],0],
+      "fill-extrusion-opacity":0.75
+     }
+    },firstTextLabel());
+
+    addGameLayers();
+    updateTerritoriesOnMap();
+    mapMessage("Satellite layer loaded where provider tiles are available.");
+   }catch(error){
+    console.warn("Optional map layer issue:",error);
+    addGameLayers();
+    updateTerritoriesOnMap();
+    mapMessage("Base map loaded; some optional layers are unavailable.");
+   }
+  });
+
+  map.on("error",event=>{
+   console.warn("Map provider error:",event.error||event);
+   if(event.sourceId==="atlas-satellite"){
+    mapMessage("Some imagery tiles are unavailable at this zoom or location.");
+   }
+  });
+ }catch(error){
+  console.error(error);
+  mapMessage("Map failed to initialize. Check your connection.");
+ }
+}
+function firstTextLabel(){
+ const layers=map.getStyle().layers||[];
+ const found=layers.find(layer=>layer.type==="symbol"&&layer.layout&&layer.layout["text-field"]);
+ return found?found.id:undefined;
+}
+function addGameLayers(){
+ if(map.getSource("atlas-route"))return;
+
+ map.addSource("atlas-route",{
+  type:"geojson",
+  data:{type:"FeatureCollection",features:[]}
+ });
+ map.addLayer({
+  id:"atlas-route-line",
+  type:"line",
+  source:"atlas-route",
+  filter:["==",["geometry-type"],"LineString"],
+  layout:{"line-cap":"round","line-join":"round"},
+  paint:{"line-color":"#00d995","line-width":4}
+ });
+
+ map.addSource("atlas-territories",{
+  type:"geojson",
+  data:{type:"FeatureCollection",features:[]}
+ });
+ map.addLayer({
+  id:"atlas-territory-fill",
+  type:"fill",
+  source:"atlas-territories",
+  paint:{"fill-color":["get","color"],"fill-opacity":0.32}
+ });
+ map.addLayer({
+  id:"atlas-territory-outline",
+  type:"line",
+  source:"atlas-territories",
+  layout:{"line-cap":"round","line-join":"round"},
+  paint:{"line-color":["get","color"],"line-width":3}
+ });
+
+ map.on("click","atlas-territory-fill",event=>{
+  const f=event.features&&event.features[0];
+  if(!f)return;
+  $("zoneName").textContent=f.properties.ownerName||"Atlas Territory";
+  $("zoneInfo").textContent="Player ID: "+f.properties.playerId+
+   " · Stored area: "+(f.properties.areaLabel||"Unavailable");
+  new maplibregl.Popup().setLngLat(event.lngLat)
+   .setHTML("<strong>"+escapeHtml(f.properties.ownerName)+
+    "</strong><br>Player ID: "+escapeHtml(f.properties.playerId)+
+    "<br>Area: "+escapeHtml(f.properties.areaLabel))
+   .addTo(map);
+ });
+ map.on("mouseenter","atlas-territory-fill",()=>map.getCanvas().style.cursor="pointer");
+ map.on("mouseleave","atlas-territory-fill",()=>map.getCanvas().style.cursor="");
+ updateRouteOnMap();
+}
+function updateRouteOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource("atlas-route"))return;
+ const coordinates=route.map(p=>[p.lon,p.lat]);
+ const features=[];
+ if(coordinates.length>=2){
+  features.push({
+   type:"Feature",properties:{},
+   geometry:{type:"LineString",coordinates}
+  });
+ }
+ map.getSource("atlas-route").setData({type:"FeatureCollection",features});
+}
+function updateTerritoriesOnMap(){
+ if(!map||!map.isStyleLoaded()||!map.getSource("atlas-territories"))return;
+ const features=territories.map(t=>{
+  const geometry=t.geometry;
+  if(!geometry)return null;
+  return {
+   type:"Feature",
+   properties:{
+    id:t.id,
+    ownerName:t.ownerName,
+    playerId:t.playerId,
+    color:t.color||playerColor(t.playerId),
+    areaLabel:t.areaLabel||formatArea(t.area)
+   },
+   geometry
+  };
+ }).filter(Boolean);
+ map.getSource("atlas-territories").setData({
+  type:"FeatureCollection",features
+ });
+}
+function goToMyLocation(){
+ if(!navigator.geolocation){say("This browser does not support GPS.");return;}
+ if(!window.isSecureContext){say("GPS needs the HTTPS website.");return;}
+ say("Finding current location…");
+ navigator.geolocation.getCurrentPosition(position=>{
+  const c=position.coords;
+  if(!Number.isFinite(c.latitude)||!Number.isFinite(c.longitude)){
+   say("GPS returned invalid coordinates.");return;
+  }
+  const point=[c.longitude,c.latitude];
+  if(currentGpsMarker)currentGpsMarker.remove();
+  currentGpsMarker=new maplibregl.Marker({color:"#178cff"})
+   .setLngLat(point).addTo(map);
+  map.flyTo({center:point,zoom:16,duration:900});
+  say("Location found. Reported accuracy: "+Math.round(c.accuracy)+" m.");
+ },error=>{
+  say(error.code===1?"Location permission denied.":
+   error.code===2?"Location unavailable. Check device settings.":
+   "GPS timed out. Try again.");
+ },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+}
+function locateMyTerritory(){
+ const mine=territories.filter(t=>t.playerId===playerId()&&t.geometry);
+ if(!mine.length){say("No saved territory exists for this player yet.");return;}
+ const bounds=new maplibregl.LngLatBounds();
+ mine.forEach(t=>walkCoordinates(t.geometry.coordinates,point=>{
+  if(Number.isFinite(point[0])&&Number.isFinite(point[1]))bounds.extend(point);
+ }));
+ if(!bounds.isEmpty())map.fitBounds(bounds,{padding:55,maxZoom:16,duration:900});
+}
+function walkCoordinates(value,callback){
+ if(!Array.isArray(value))return;
+ if(value.length>=2&&typeof value[0]==="number"&&typeof value[1]==="number"){
+  callback(value);
+ }else value.forEach(child=>walkCoordinates(child,callback));
+}
+function toggle3D(){
+ if(!map)return;
+ is3D=!is3D;
+ map.easeTo({pitch:is3D?52:0,bearing:is3D?-12:0,duration:650});
+ if(map.getLayer("atlas-3d-buildings")){
+  map.setLayoutProperty("atlas-3d-buildings","visibility",is3D?"visible":"none");
+ }
+ $("viewModeBtn").textContent=is3D?"▱ 3D":"▱ FLAT";
+}
+
+/* -------------------- GPS RECORDING -------------------- */
+function setRecordingButton(active){
+ $("toggleBtn").textContent=active?"STOP MISSION & CAPTURE":"START MISSION";
+ $("toggleBtn").classList.toggle("secondary",active);
+}
+function toggleTracking(){
+ if(recording)stopTracking();
+ else startTracking();
+}
+function startTracking(){
+ if(recording)return;
+ if(!navigator.geolocation){say("This browser does not support GPS.");return;}
+ if(!window.isSecureContext){say("GPS requires your published HTTPS website.");return;}
+ if(!map){say("Wait for the map to initialize.");return;}
+
+ route=[];
+ totalDistance=0;
+ lastAcceptedAt=0;
+ startedAt=Date.now();
+ recording=true;
+ $("area").textContent="—";
+ $("missionStatus").textContent="RECORDING";
+ setRecordingButton(true);
+ updateStats();
+ updateRouteOnMap();
+ timerId=setInterval(updateTimer,1000);
+ say("Requesting high-accuracy GPS. Wait for a reliable position…");
+
+ try{
+  watchId=navigator.geolocation.watchPosition(onGpsPosition,onGpsError,{
+   enableHighAccuracy:true,
+   maximumAge:0,
+   timeout:30000
+  });
+ }catch(error){
+  stopTracking(true,"Could not start GPS: "+error.message);
+ }
+}
+function onGpsPosition(position){
+ if(!recording)return;
+ const c=position.coords;
+ const now=position.timestamp||Date.now();
+ if(!Number.isFinite(c.latitude)||!Number.isFinite(c.longitude)){
+  say("Ignored invalid GPS coordinates.");return;
+ }
+ if(!Number.isFinite(c.accuracy)||c.accuracy>GPS_MAX_ACCURACY_METERS){
+  say("Waiting for a better GPS signal. Accuracy: "+
+   (Number.isFinite(c.accuracy)?Math.round(c.accuracy):"unknown")+" m.");
+  return;
+ }
+ if(Date.now()-now>GPS_MAX_AGE_MS)return;
+
+ const point={
+  lat:c.latitude,lon:c.longitude,
+  accuracy:c.accuracy,timestamp:now
+ };
+ const last=route[route.length-1];
+ if(last){
+  const gap=(now-last.timestamp)/1000;
+  const step=distanceBetween(last,point);
+  if(step<Math.max(GPS_MIN_STEP_METERS,(last.accuracy+point.accuracy)*0.25)){
+   say("GPS position unchanged or within accuracy noise. Waiting for movement.");
+   return;
+  }
+  if(gap<=0||step/gap>GPS_MAX_SPEED_MPS){
+   say("Ignored an implausible GPS jump. Waiting for a stable position.");
+   return;
+  }
+  totalDistance+=step;
+ }
+ route.push(point);
+ lastAcceptedAt=now;
+ updateStats();
+ updateRouteOnMap();
+ if(route.length===1)map.flyTo({center:[point.lon,point.lat],zoom:16,duration:700});
+ say("GPS recording · Accuracy "+Math.round(c.accuracy)+" m · Accepted points: "+route.length);
+}
+function onGpsError(error){
+ if(!recording)return;
+ const message=error.code===1?"Location permission denied. Allow GPS permission.":
+  error.code===2?"GPS position unavailable. Check device location settings.":
+  "GPS timed out. Move to a place with a clearer view of the sky.";
+ say(message);
+}
+function updateStats(){
+ $("distance").textContent=formatDistance(totalDistance);
+ $("points").textContent=route.length;
+ updateTimer();
+}
+function updateTimer(){
+ if(!startedAt)return;
+ const seconds=Math.floor((Date.now()-startedAt)/1000);
+ $("duration").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+
+  String(seconds%60).padStart(2,"0");
+}
+function stopGpsWatcher(){
+ if(watchId!==null){
+  navigator.geolocation.clearWatch(watchId);
+  watchId=null;
+ }
+ if(timerId!==null){clearInterval(timerId);timerId=null;}
+}
+function saveMissionRecord(record){
+ const history=readArray(HISTORY_KEY);
+ history.unshift(record);
+ return saveHistory(history);
+}
+function stopTracking(fromError=false,errorMessage=""){
+ if(!recording)return;
+ recording=false;
+ stopGpsWatcher();
+ setRecordingButton(false);
+ updateTimer();
+
+ $("missionStatus").textContent=fromError?"INTERRUPTED":"FINISHED";
+ const elapsed=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
+ const duration=String(Math.floor(elapsed/60)).padStart(2,"0")+":"+
+  String(elapsed%60).padStart(2,"0");
+ const baseRecord={
+  date:new Date().toLocaleString(),
+  distance:Math.round(totalDistance*100)/100,
+  duration,
+  area:0,
+  points:route.length
+ };
+
+ // Save the mission regardless of whether territory creation succeeds.
+ const historySaved=saveMissionRecord(baseRecord);
+ renderHistory();
+
+ updateRouteOnMap();
+
+ if(fromError){
+  $("area").textContent="Unavailable";
+  say(errorMessage+" Mission record "+(historySaved?"saved.":"could not be saved."));
+  return;
+ }
+ if(route.length<3){
+  $("area").textContent="Unavailable";
+  say("Mission stopped. At least 3 recorded positions are needed to attempt a territory. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+  return;
+ }
+ if(!window.turf){
+  $("area").textContent="Unavailable";
+  say("Turf geometry library did not load. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+  return;
+ }
+   try{
+  const coords=route.map(p=>[p.lon,p.lat]);
+  const distinct=new Set(coords.map(p=>p[0].toFixed(7)+","+p[1].toFixed(7)));
+  if(distinct.size<3){
+   $("area").textContent="Unavailable";
+   say("Territory rejected: at least 3 distinct GPS positions are required. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+   return;
+  }
+
+  // Authoritative geometry uses original GPS coordinates.
+  const ring=coords.slice();
+  if(ring[0][0]!==ring[ring.length-1][0]||ring[0][1]!==ring[ring.length-1][1]){
+   ring.push(ring[0]);
+  }
+  let polygon;
+  try{
+   polygon=turf.polygon([ring]);
+   if(!turf.booleanValid(polygon))throw new Error("Invalid polygon");
+  }catch(error){
+   $("area").textContent="Unavailable";
+   say("Territory rejected: the recorded route does not form a valid simple enclosed area. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+   return;
+  }
+    let capture=turf.feature(polygon.geometry);
+  // Remove previously owned territory from the new capture.
+  for(const old of territories){
+   if(!old.geometry)continue;
+   const difference=turf.difference(turf.featureCollection([
+    capture,turf.feature(old.geometry)
+   ]));
+   if(!difference){capture=null;break;}
+   if(difference.geometry)capture=difference;
+  }
+  if(!capture||!capture.geometry||
+    !["Polygon","MultiPolygon"].includes(capture.geometry.type)){
+   $("area").textContent="Unavailable";
+   say("No unclaimed area remained inside this route. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+   return;
+  }
+
+  const area=turf.area(capture);
+  if(!Number.isFinite(area)||area<MIN_TERRITORY_AREA_M2){
+   $("area").textContent="Unavailable";
+   say("Territory rejected: enclosed area is too small or invalid. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+   return;
+  }
+    const id=playerId();
+  const geometry=capture.geometry;
+  const territory={
+   id:"territory-"+Date.now(),
+   ownerName:playerName(),
+   playerId:id,
+   color:playerColor(id),
+   area:area,
+   areaLabel:formatArea(area),
+   capturedAt:new Date().toLocaleString(),
+   geometry:geometry,
+   missions:[{
+    date:baseRecord.date,
+    distance:baseRecord.distance,
+    duration:baseRecord.duration,
+    area:area,
+    points:route.length
+   }]
+  };
+
+  const previous=territories.slice();
+  territories.unshift(territory);
+  if(!saveTerritories()){
+   territories=previous;
+   $("area").textContent="Unavailable";
+   say("Territory could not be saved in browser storage. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+   return;
+  }
+
+  $("area").textContent=formatArea(area);
+  // Update the most recent history record with the validated territory area.
+  const history=readArray(HISTORY_KEY);
+  if(history.length){
+   history[0].area=Math.round(area*100)/100;
+   saveHistory(history);
+  }
+  renderHistory();
+  updateTerritoriesOnMap();
+  $("zoneName").textContent="Territory captured";
+  $("zoneInfo").textContent="Owner: "+playerName()+" · Area: "+formatArea(area);
+  say("Territory captured and stored on this device. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+ }catch(error){
+  console.error("Territory capture error:",error);
+  $("area").textContent="Unavailable";
+  say("Territory creation failed during geometry validation. Mission record "+(historySaved?"saved.":"could not be saved.")+".");
+ }
+}
+  /* -------------------- HISTORY & IDENTITY -------------------- */
+function renderHistory(){
+ const history=readArray(HISTORY_KEY);
+ const box=$("historyList");
+ if(!history.length){box.innerHTML="<p>No missions recorded yet.</p>";return;}
+ box.innerHTML=history.slice(0,20).map((m,i)=>(
+  '<div class="history-item"><strong>Mission '+(history.length-i)+'</strong>'+
+  '<p>'+escapeHtml(m.date||"Unknown date")+'</p>'+
+  '<p>Distance: '+escapeHtml(formatDistance(Number(m.distance)||0))+
+  ' · Duration: '+escapeHtml(m.duration||"00:00")+
+  ' · Area: '+escapeHtml(formatArea(Number(m.area)))+
+  ' · GPS points: '+escapeHtml(m.points??0)+'</p></div>'
+ )).join("");
+}
+function clearHistory(){
+ if(!confirm("Delete mission history from this browser? Territory shapes will remain."))return;
+ try{localStorage.removeItem(HISTORY_KEY);renderHistory();say("Mission history cleared.");}
+ catch(error){say("Could not clear mission history.");}
+}
+function loadIdentity(){
+ let id=safeGet(PLAYER_ID_KEY,"");
+ if(!id){id=DEFAULT_PLAYER_ID;safeSet(PLAYER_ID_KEY,id);}
+ $("playerId").textContent=id;
+ $("playerName").value=safeGet(PLAYER_NAME_KEY,"")||"";
+ $("playerName").addEventListener("change",()=>{
+  const name=playerName();
+  $("playerName").value=name;
+  safeSet(PLAYER_NAME_KEY,name);
+ });
+}
+function loadTerritories(){
+ territories=readArray(TERRITORY_KEY).filter(t=>
+  t&&typeof t==="object"&&t.geometry&&
+  ["Polygon","MultiPolygon"].includes(t.geometry.type)&&t.playerId
+ );
+}
+function clearTerritories(){
+ if(!confirm("Clear ALL territory shapes saved on this device? Mission history and player identity will remain."))return;
+ territories=[];
+ if(!saveTerritories()){
+  territories=readArray(TERRITORY_KEY);
+  say("Could not clear territory data. Browser storage may be unavailable.");
+  return;
+ }
+  updateTerritoriesOnMap();
+ $("zoneName").textContent="No saved territory";
+ $("zoneInfo").textContent="Territory test data has been cleared.";
+ say("Territories cleared. Mission history and player identity were preserved.");
+}
+function showChallenges(){
+ const box=$("challengeInfo");
+ box.hidden=false;
+ box.textContent="Challenges are planned for a future version. Multiplayer is not connected yet.";
+}
+
+/* -------------------- STARTUP -------------------- */
+window.addEventListener("load",()=>{
+ loadIdentity();
+ loadTerritories();
+ renderHistory();
+ initMap();
+});
+</script>
+</body>
+</html>
