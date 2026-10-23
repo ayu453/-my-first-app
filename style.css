@@ -1,0 +1,59 @@
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b1018;--panel:#131c29;--border:#263448;--green:#54f5a5;--muted:#aab8c9}
+body{font-family:Arial,sans-serif;background:var(--bg);color:#f4f7fb;width:100%;margin:0;padding:clamp(12px,2.5vw,30px)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:12px;flex-wrap:wrap}
+.logo{font-size:clamp(18px,3vw,25px);font-weight:900;letter-spacing:1px}
+.green{color:var(--green)}
+.pill{border:1px solid #344154;border-radius:20px;padding:8px 12px;font-size:11px;color:var(--muted)}
+.eyebrow{font-size:11px;letter-spacing:2px;color:var(--green);font-weight:bold}
+h1{font-size:clamp(32px,5vw,54px);line-height:1.12;margin:14px 0}
+p{color:var(--muted);font-size:14px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
+.stat,.panel,.details{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;min-width:0}
+.stat small{color:#9ba9bb;font-size:11px}
+.stat h2{margin-top:9px;font-size:clamp(18px,2.5vw,26px);overflow-wrap:anywhere}
+h3{font-size:18px;margin:28px 0 13px}
+.panel p{margin-top:9px}
+.status{margin-top:14px;background:#0d151f;border-radius:10px;padding:13px;font-size:13px;line-height:1.6;color:#d0dce7;overflow-wrap:anywhere}
+.controls{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
+button{border:0;border-radius:10px;padding:14px;background:var(--green);color:#07120c;font-size:14px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+.controls button{width:100%;min-height:49px}
+.secondary{background:#202c3b;color:white;border:1px solid #344154}
+.danger{background:#49252d;color:#ffd5dc;border:1px solid #70404a}
+.note{font-size:11px;margin-top:12px}
+.map-shell{width:100%;height:clamp(430px,68vh,850px);min-height:430px;position:relative;overflow:hidden;border:1px solid #30464a;border-radius:16px;background:#d9e6d1}
+#atlasMap{width:100%;height:100%;min-height:430px}
+.map-top{position:absolute;z-index:5;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+.map-chip{background:#0b1018e8;border:1px solid #344154;border-radius:9px;padding:10px 12px;font-size:11px;color:#eaf3fc;max-width:75%;line-height:1.5}
+.map-buttons{position:absolute;z-index:5;bottom:max(24px,env(safe-area-inset-bottom));left:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.map-buttons button{padding:11px 13px;font-size:12px;pointer-events:auto;min-width:44px;min-height:44px}
+.icon-button{width:46px;min-width:46px!important;padding:10px!important;font-size:18px!important}
+.map-top{top:max(12px,env(safe-area-inset-top));left:12px;right:12px}
+.map-chip{max-width:calc(100% - 8px)}
+#mapStatus{display:none}
+#territoryTestTools{margin-top:12px}
+#territoryTestTools button{width:100%}
+@media(max-width:420px){.map-buttons{left:8px;right:8px;gap:6px}.icon-button{width:44px;min-width:44px!important}.map-shell{height:62vh;min-height:430px}.map-top{left:8px;right:8px}.map-chip{font-size:10px;padding:8px 9px}}
+.map-credit{position:absolute;z-index:5;bottom:5px;left:12px;background:#0b1018df;padding:4px 7px;border-radius:5px;font-size:10px;color:#d1dae6;pointer-events:none}
+.details{margin-top:13px}
+.details h2{margin:10px 0;font-size:21px}
+.details p{margin-top:7px}
+.history-item{background:#0d151f;border:1px solid var(--border);border-radius:10px;padding:13px;margin-top:10px}
+.history-item h4{font-size:14px;margin-bottom:8px;color:var(--green)}
+.history-item p{font-size:12px;margin-top:4px}
+.history-actions{margin-top:14px}
+.history-actions button{width:100%}
+.empty{font-size:13px;color:var(--muted);padding:14px 0}
+footer{text-align:center;font-size:11px;color:#718096;margin:30px 0 10px;line-height:1.7}
+.maplibregl-ctrl-group{border-radius:9px!important;overflow:hidden}
+@media(max-width:700px){
+ body{padding:12px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat{padding:13px}
+ .map-shell,#atlasMap{min-height:430px}
+ .map-shell{height:62vh}
+ .map-buttons{bottom:max(24px,env(safe-area-inset-bottom))}
+ .map-top{flex-wrap:wrap}
+}
+
